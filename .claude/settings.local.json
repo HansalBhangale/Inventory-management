@@ -24,7 +24,10 @@
       "Bash(./.venv/Scripts/python.exe -m pytest -q)",
       "Bash(./.venv/Scripts/python.exe -c ' *)",
       "Bash(./.venv/Scripts/python.exe -m kaggle competitions download -h)",
-      "Bash(./.venv/Scripts/python.exe -m src.ingest.download_data --dataset m5_accuracy m5_uncertainty)"
+      "Bash(./.venv/Scripts/python.exe -m src.ingest.download_data --dataset m5_accuracy m5_uncertainty)",
+      "Bash(./.venv/Scripts/python.exe -m src.ingest.load_m5 --stores CA_1)",
+      "Bash(./.venv/Scripts/python.exe -m src.ingest.load_m5)",
+      "Bash(./.venv/Scripts/python.exe -m src.ingest.validate)"
     ]
   }
 }
