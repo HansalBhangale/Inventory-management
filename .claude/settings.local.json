@@ -27,7 +27,11 @@
       "Bash(./.venv/Scripts/python.exe -m src.ingest.download_data --dataset m5_accuracy m5_uncertainty)",
       "Bash(./.venv/Scripts/python.exe -m src.ingest.load_m5 --stores CA_1)",
       "Bash(./.venv/Scripts/python.exe -m src.ingest.load_m5)",
-      "Bash(./.venv/Scripts/python.exe -m src.ingest.validate)"
+      "Bash(./.venv/Scripts/python.exe -m src.ingest.validate)",
+      "Bash(./.venv/Scripts/python.exe -m src.features.segmentation --summary)",
+      "Bash(../.venv/Scripts/python.exe -m jupyter nbconvert --to notebook --execute --inplace 02_eda.ipynb --ExecutePreprocessor.timeout=300)",
+      "Bash(./.venv/Scripts/python.exe -m ipykernel install --user --name kirana --display-name \"Kirana \\(.venv\\)\")",
+      "Bash(../.venv/Scripts/python.exe -m jupyter nbconvert --to notebook --execute --inplace 02_eda.ipynb --ExecutePreprocessor.kernel_name=kirana --ExecutePreprocessor.timeout=300)"
     ]
   }
 }
