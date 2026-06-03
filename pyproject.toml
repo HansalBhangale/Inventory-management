@@ -1,0 +1,18 @@
+[project]
+name = "kirana-forecasting"
+version = "0.1.0"
+description = "SKU-level probabilistic demand forecasting + automated reordering for kirana stores"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

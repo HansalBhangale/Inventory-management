@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la)",
+      "Bash(pip --version)",
+      "Bash(kaggle --version)",
+      "Bash(git --version)",
+      "Bash(mkdir -p config data/raw data/staged data/features notebooks src/ingest src/features src/models src/continuous src/reorder src/evaluate src/serve pipelines tests docs)",
+      "Bash(touch src/__init__.py src/ingest/__init__.py src/features/__init__.py src/models/__init__.py src/continuous/__init__.py src/reorder/__init__.py src/evaluate/__init__.py src/serve/__init__.py tests/__init__.py)",
+      "Bash(find . -type d -not -path '*/\\\\.*')",
+      "Bash(python -m venv .venv)",
+      "Bash(./.venv/Scripts/python.exe -m pip install --upgrade pip)",
+      "Bash(./.venv/Scripts/python.exe -m pip install -r requirements.txt)",
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git commit -q -m ' *)"
+    ]
+  }
+}

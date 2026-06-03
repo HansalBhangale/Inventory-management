@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Data — never commit raw/staged data or large artifacts
+data/raw/
+data/staged/
+data/features/
+*.parquet
+*.csv
+*.zip
+
+# Secrets
+.kaggle/
+kaggle.json
+.env
+
+# Local editor / tooling settings
+.claude/settings.local.json
+
+# MLOps
+mlruns/
+mlflow.db
+
+# OS
+.DS_Store
+Thumbs.db

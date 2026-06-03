@@ -1,0 +1,48 @@
+# Kirana Demand Forecasting — dependencies
+# Install core (Phases 0-5):  pip install -r requirements.txt
+# Heavy/optional MLOps deps are grouped at the bottom (commented) — enable when needed.
+
+# --- Core data & compute ---
+numpy>=1.26,<3
+pandas>=2.1
+pyarrow>=15.0            # Parquet
+duckdb>=0.10            # query Parquet on disk cheaply
+polars>=0.20            # scale-out dataframe (optional in code paths)
+pyyaml>=6.0
+
+# --- Data validation ---
+pandera>=0.18
+
+# --- Forecasting / modeling ---
+lightgbm>=4.1           # global quantile model
+statsforecast>=1.7      # Croston/TSB/ETS/seasonal-naive baselines
+scikit-learn>=1.4
+optuna>=3.5             # hyperparameter tuning with TS CV
+hierarchicalforecast>=0.4   # SKU<->category reconciliation
+
+# --- Explainability ---
+shap>=0.44
+
+# --- Online learning & drift ---
+river>=0.21             # incremental learning, ADWIN/Page-Hinkley/KSWIN
+
+# --- Data acquisition ---
+kaggle>=1.6
+requests>=2.31          # weather / external APIs
+
+# --- Viz & notebooks ---
+matplotlib>=3.8
+plotly>=5.18
+jupyter>=1.0
+ipykernel>=6.29
+
+# --- Testing ---
+pytest>=8.0
+
+# --- MLOps (heavier; uncomment when reaching Phases 6/9/10) ---
+# mlflow>=2.10           # experiment tracking + model registry
+# evidently>=0.4         # drift & monitoring
+# prefect>=2.16          # orchestration (or apache-airflow)
+# feast>=0.36            # feature store (optional)
+# fastapi>=0.110         # serving
+# uvicorn>=0.27

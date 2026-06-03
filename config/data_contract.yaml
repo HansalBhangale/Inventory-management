@@ -1,0 +1,103 @@
+# data_contract.yaml — expected schemas, enforced with pandera (Phase 1.3)
+# These describe the CANONICAL staged tables. Source loaders (e.g. M5) map into these.
+
+tables:
+
+  sales_transactions:
+    grain: line_item
+    columns:
+      date:        {dtype: date,   nullable: false, checks: {le: today}}
+      store_id:    {dtype: str,    nullable: false}
+      sku_id:      {dtype: str,    nullable: false}
+      qty:         {dtype: int,    nullable: false}        # negative allowed = return (flagged)
+      unit_price:  {dtype: float,  nullable: true,  checks: {ge: 0}}
+      discount:    {dtype: float,  nullable: true,  checks: {ge: 0}}
+    rules:
+      - non_null_keys: [date, store_id, sku_id]
+
+  product_master:
+    grain: sku
+    primary_key: sku_id
+    columns:
+      sku_id:          {dtype: str,   nullable: false}
+      name:            {dtype: str,   nullable: true}
+      category:        {dtype: str,   nullable: true}
+      family:          {dtype: str,   nullable: true}
+      brand:           {dtype: str,   nullable: true}
+      pack_size:       {dtype: int,   nullable: false, checks: {ge: 1}}
+      perishable:      {dtype: bool,  nullable: false}
+      shelf_life_days: {dtype: int,   nullable: true}      # null => non-perishable
+      unit_cost:       {dtype: float, nullable: true, checks: {ge: 0}}
+      sell_price:      {dtype: float, nullable: true, checks: {ge: 0}}
+    rules:
+      - every_sales_sku_must_exist_here: true
+
+  inventory_snapshot:
+    grain: store_sku_day
+    columns:
+      date:          {dtype: date, nullable: false}
+      store_id:      {dtype: str,  nullable: false}
+      sku_id:        {dtype: str,  nullable: false}
+      on_hand_qty:   {dtype: int,  nullable: false, checks: {ge: 0}}
+      on_order_qty:  {dtype: int,  nullable: false, checks: {ge: 0}}
+    rules:
+      - one_row_per_active_store_sku_day: true
+
+  purchase_orders:
+    grain: po_line
+    columns:
+      po_id:       {dtype: str, nullable: false}
+      sku_id:      {dtype: str, nullable: false}
+      supplier_id: {dtype: str, nullable: false}
+      order_date:  {dtype: date, nullable: false}
+      order_qty:   {dtype: int,  nullable: false, checks: {ge: 1}}
+
+  goods_receipts:
+    grain: receipt_line
+    columns:
+      po_id:        {dtype: str,  nullable: false}
+      sku_id:       {dtype: str,  nullable: false}
+      receipt_date: {dtype: date, nullable: false}
+      received_qty: {dtype: int,  nullable: false, checks: {ge: 0}}
+    rules:
+      - referential_integrity: "po_orders joinable on (po_id, sku_id)"
+
+  suppliers:
+    grain: supplier
+    primary_key: supplier_id
+    columns:
+      supplier_id: {dtype: str, nullable: false}
+      name:        {dtype: str, nullable: true}
+      moq:         {dtype: int, nullable: true, checks: {ge: 1}}
+      order_cycle: {dtype: int, nullable: true}
+
+  promotions:
+    grain: promo
+    columns:
+      sku_id:         {dtype: str,   nullable: false}
+      start:          {dtype: date,  nullable: false}
+      end:            {dtype: date,  nullable: false}
+      type:           {dtype: str,   nullable: true}
+      discount_depth: {dtype: float, nullable: true, checks: {ge: 0, le: 1}}
+
+  external_calendar:
+    grain: date_region
+    columns:
+      date:               {dtype: date,  nullable: false}
+      region:             {dtype: str,   nullable: true}
+      is_holiday:         {dtype: bool,  nullable: true}
+      festival_name:      {dtype: str,   nullable: true}
+      festival_intensity: {dtype: float, nullable: true, checks: {ge: 0, le: 1}}
+      salary_window:      {dtype: bool,  nullable: true}
+      temp:               {dtype: float, nullable: true}
+      rain_mm:            {dtype: float, nullable: true, checks: {ge: 0}}
+      fuel_index:         {dtype: float, nullable: true}
+
+# Ingestion behavior (Phase 1.4)
+ingestion:
+  landing_dir: data/raw
+  staged_dir: data/staged
+  staged_format: parquet
+  partition_by: [store_id, date]
+  on_validation_failure: quarantine   # reject bad batch, log, do not poison staged
+  idempotent: true                    # re-running a date reproduces identical output

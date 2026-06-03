@@ -1,0 +1,34 @@
+# data_sources.yaml — bootstrap dataset registry (Phase 1.1)
+# Download via Kaggle CLI after placing kaggle.json (~/.kaggle/kaggle.json).
+
+kaggle:
+  competitions:
+    m5_accuracy:
+      slug: m5-forecasting-accuracy
+      role: primary_bootstrap        # hierarchical, prices, calendar/events, SNAP
+      dest: data/raw/m5_accuracy
+      requires_rules_accept: true
+    m5_uncertainty:
+      slug: m5-forecasting-uncertainty
+      role: quantile_track           # native quantile/uncertainty target
+      dest: data/raw/m5_uncertainty
+      requires_rules_accept: true
+    store_item_demand:
+      slug: demand-forecasting-kernels-only
+      role: first_prototype          # 10 stores x 50 items x 5y daily
+      dest: data/raw/store_item_demand
+      requires_rules_accept: true
+    favorita:
+      slug: favorita-grocery-sales-forecasting
+      role: grocery_realism          # perishable flag, promo, store meta
+      dest: data/raw/favorita
+      requires_rules_accept: true
+  datasets: {}                       # add `kaggle datasets download -d <slug>` entries here
+
+external:
+  festival_calendar:
+    role: indian_retail_calendar     # Diwali, Holi, Eid, Onam, Pongal, regional
+    build: src/ingest/festival_calendar.py
+  weather:
+    provider: open-meteo             # free historical + forecast API
+    keyed_by: store_location

@@ -1,0 +1,43 @@
+# policy.yaml — reorder decision layer (Phase 7)
+# Locks down HOW we decide: when to order and how much.
+
+policy_type: sS                  # continuous-review (s, S): order up to S when IP <= s
+
+# Inventory position = on_hand + on_order - backorders
+# Trigger: if IP <= reorder_point s -> place order
+
+lead_time:
+  source: po_grn_history         # estimate from PO->GRN (Phase 7.1)
+  rolling_window_days: 180
+  default_days: 3                # fallback when supplier history is thin
+  default_std_days: 1.0
+
+safety_stock:
+  method: empirical_quantile     # Route B (preferred): use learned demand distribution
+  # method: formula              # Route A: z * sqrt(L*sd^2 + d^2*sL^2)
+  include_supply_variability: true
+
+order_quantity:
+  method: order_up_to            # S - IP for (s,S)
+  round_to_moq: true
+  round_to_pack_size: true
+  use_eoq_for_steady_items: true
+
+# Service-level target per ABC x XYZ segment (Phase 7.7). z = inverse normal CDF.
+service_levels:
+  A: {target: 0.98, z: 2.05}     # high value, stable
+  B: {target: 0.95, z: 1.65}
+  C: {target: 0.88, z: 1.18}     # low value
+  default: {target: 0.95, z: 1.65}
+
+# Perishables: newsvendor critical fractile Cu / (Cu + Co) (Phase 7.6)
+perishables:
+  use_newsvendor: true
+  cap_order_to_shelf_life_demand: true
+
+# Exception management (Phase 7.9): auto-approve routine, surface exceptions only.
+exceptions:
+  large_order_qty_threshold_units: 500
+  low_confidence_coverage_gap: 0.05
+  flag_perishables_near_expiry_days: 3
+  flag_newly_drifting: true

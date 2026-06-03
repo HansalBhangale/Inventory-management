@@ -1,0 +1,89 @@
+# features.yaml — feature definitions (Phase 4)
+# Strict rule: every feature must be computable using ONLY info available at prediction time.
+# Lags/rolling are shifted by >= horizon for direct multi-step forecasts (Phase 4.2).
+
+horizon_days: 14   # keep in sync with model.yaml; lags must be >= this for direct forecast
+
+leakage_rules:
+  min_lag_shift_days: 1          # all lags/rolling shifted >= 1 day
+  direct_multistep_shift: horizon  # and >= H for direct H-step
+  encodings_fit_on_train_only: true
+  no_same_day_or_future_actuals: true
+
+feature_families:
+
+  calendar:                       # A. from date
+    - day_of_week
+    - is_weekend
+    - week_of_year
+    - month
+    - quarter
+    - day_of_month
+    - is_month_start
+    - is_salary_window
+    - is_holiday
+
+  festival:                       # B. Indian retail driver
+    - days_to_next_festival
+    - days_since_last_festival
+    - festival_intensity
+    - in_festival_leadup          # e.g. 7 days before Diwali
+
+  lags:                           # C. respect horizon (lags >= H)
+    values: [14, 21, 28, 365]     # lag_7 dropped: < horizon=14 (would leak for direct H-step)
+
+  rolling:                        # D. shifted to avoid leakage
+    windows: [7, 14, 28]
+    stats: [mean, median, std, min, max]
+    same_dow_mean_lookback: 4     # last 4 same weekdays
+    ewma_halflife_days: 7
+    expanding_mean: true
+
+  trend:                          # E. momentum
+    - roll_mean_7_over_28
+    - wow_change
+    - yoy_change
+
+  price_promo:                    # F.
+    - unit_price
+    - relative_price              # vs category median
+    - discount_depth
+    - on_promo
+    - days_since_promo_start
+    - days_to_promo_end
+    - promo_in_next_7d
+
+  stockout:                       # G. features only; target masked on stockout days
+    - was_stockout_yesterday
+    - was_stockout_last_7d
+    - days_since_stockout
+    - stockout_rate_28d
+
+  hierarchy_categorical:          # H. LightGBM native categorical or target encoding
+    - store_id
+    - category
+    - family
+    - brand
+    - region
+    - store_type
+    - store_cluster
+
+  sku_attributes:                 # I.
+    - pack_size
+    - perishable
+    - shelf_life_days
+    - unit_cost
+    - margin
+
+  external:                       # J.
+    - temp
+    - rain_mm
+    - fuel_index
+
+  intermittency:                  # K. descriptors
+    - adi
+    - cv2
+    - prob_of_sale_28d
+
+# Final pruned feature list is written here after Phase 4.3 importance analysis.
+final_feature_list: []           # populated by 04_feature_importance.ipynb

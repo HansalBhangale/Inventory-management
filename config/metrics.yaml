@@ -1,0 +1,42 @@
+# metrics.yaml — evaluation targets & go-live acceptance thresholds (Phase 8)
+
+primary_metrics:
+  point: wape                    # scale-free, robust to zeros
+  distribution: [pinball, coverage]
+  credibility_gate: mase         # must beat seasonal-naive
+
+forecast_accuracy_targets:
+  wape_a_items_max: 0.25
+  wape_category_max: 0.15
+  mase_max: 1.0                  # aim <= 0.8
+  bias_abs_max: 0.05             # within +-5%
+  smape_smooth_max: 0.30
+  coverage:
+    p90: [0.88, 0.92]
+    p95: [0.93, 0.97]
+
+inventory_business_targets:
+  cycle_service_level:
+    A: 0.98
+    B: 0.95
+    C: 0.88
+  fill_rate_ab_min: 0.95
+  stockout_rate_reduction: [0.30, 0.50]   # vs current practice
+  inventory_turns_increase: [0.15, 0.30]
+  total_inventory_reduction: [0.20, 0.30]
+  perishable_waste_reduction: [0.10, 0.30]
+  fva_positive_all_segments: true
+
+# Go-live acceptance criteria (Phase 8.4) — all must pass on hold-out + simulation.
+go_live_acceptance:
+  - mase_below_1_on_pct_ab_skus: 0.80
+  - p95_coverage_in_range: [0.93, 0.97]
+  - simulated_service_meets_segment_targets_at_inventory_leq_current: true
+  - bias_within_pct: 0.05
+  - fva_positive_all_segments: true
+
+backtest:
+  protocol: rolling_origin       # walk-forward, never random K-fold
+  n_origins: 5
+  validation_horizon_days: 14
+  embargo_days: 14               # = horizon, prevents lag leakage

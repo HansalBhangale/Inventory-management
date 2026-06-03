@@ -1,0 +1,61 @@
+# model.yaml — forecasting targets, horizon, quantiles, objectives
+# Phase 0 deliverable: locks down WHAT we predict.
+
+forecast:
+  # Grain: one row = (store_id, sku_id, date)
+  grain: [store_id, sku_id, date]
+  target: units_sold            # corrected for censored demand (see Phase 3)
+
+  # Horizon must cover max_lead_time + review_period.
+  # Default lead_time ~3d, daily review -> forecast 14d to be safe (O1).
+  horizon_days: 14
+  review_period_days: 1
+
+  # Probabilistic forecast: we predict a distribution, not a point.
+  # Upper quantiles protect against stockouts (drive safety stock in Phase 7).
+  quantiles: [0.5, 0.9, 0.95]
+  enforce_non_crossing: true    # P95 >= P90 >= P50
+
+# Central-forecast objective for the point/median model.
+# tweedie is natural for non-negative, zero-inflated counts (Phase 3.7).
+central_objective: tweedie       # alternatives: regression_l1, regression (log1p)
+tweedie_variance_power: 1.2
+
+# Quantile heads use the pinball (quantile) objective, one head per quantile.
+quantile_objective: quantile
+
+# Global LightGBM base model hyperparameters (tuned later with Optuna, Phase 5.6).
+lightgbm:
+  boosting_type: gbdt
+  n_estimators: 2000
+  learning_rate: 0.05
+  num_leaves: 63
+  max_depth: -1
+  min_child_samples: 50
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 1
+  lambda_l1: 0.0
+  lambda_l2: 0.0
+  early_stopping_rounds: 100
+  n_jobs: -1
+  seed: 42
+  verbose: -1
+
+# Per-segment model routing (Phase 5.7). Segments come from EDA (Phase 2.2).
+routing:
+  smooth: global_lgbm
+  erratic: global_lgbm
+  intermittent: tsb            # Croston/SBA/TSB family
+  lumpy: tsb
+  cold_start: category_model   # attributes + aggregate-and-distribute
+
+# Hybrid continuous-learning (Phase 6).
+continuous_learning:
+  base_model_retrain_window_months: 30   # >= 24-36 mo to capture annual seasonality
+  base_model_schedule: weekly
+  online_layer: river                    # daily residual correction
+  drift_detectors: [adwin, page_hinkley]
+  champion_challenger:
+    promotion_metric: wape               # also gate on pinball + coverage
+    min_improvement_pct: 2.0
