@@ -15,7 +15,16 @@
       "Bash(git config *)",
       "Bash(git add *)",
       "Bash(git rm *)",
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "Bash(./.venv/Scripts/python.exe -c \"import kaggle; print\\(kaggle.__version__\\)\")",
+      "Bash(./.venv/Scripts/python.exe -m pip list)",
+      "Bash(echo \"packages so far: $\\(./.venv/Scripts/python.exe -m pip list)",
+      "Bash(./.venv/Scripts/python.exe -c \"import lightgbm, statsforecast, river, shap, optuna, pandera, kaggle, duckdb, pandas, numpy; print\\('imports OK'\\); print\\('kaggle', kaggle.__version__\\); print\\('lightgbm', lightgbm.__version__\\)\")",
+      "Bash(grep -vE \"UserWarning|warnings.warn|^\\\\s*$\")",
+      "Bash(./.venv/Scripts/python.exe -m pytest -q)",
+      "Bash(./.venv/Scripts/python.exe -c ' *)",
+      "Bash(./.venv/Scripts/python.exe -m kaggle competitions download -h)",
+      "Bash(./.venv/Scripts/python.exe -m src.ingest.download_data --dataset m5_accuracy m5_uncertainty)"
     ]
   }
 }
