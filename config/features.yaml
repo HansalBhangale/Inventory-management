@@ -85,5 +85,50 @@ feature_families:
     - cv2
     - prob_of_sale_28d
 
-# Final pruned feature list is written here after Phase 4.3 importance analysis.
-final_feature_list: []           # populated by 04_feature_importance.ipynb
+# Model input features actually built by src/features/build_features.py (Phase 4).
+# Pruned to the final set after Phase 4.3 importance analysis (gain/permutation/SHAP).
+model_features:
+  numeric:
+    - lag_14
+    - lag_21
+    - lag_28
+    - lag_365
+    - roll_mean_7
+    - roll_mean_14
+    - roll_mean_28
+    - roll_std_28
+    - roll_max_28
+    - roll_min_28
+    - same_dow_mean_4
+    - prob_of_sale_28d
+    - trend_7_28
+    - unit_price
+    - relative_price
+    - festival_intensity
+    - days_to_next_festival
+    - days_since_last_festival
+    - adi
+    - cv2
+    - pack_size
+    - day_of_week
+    - week_of_year
+    - month
+    - quarter
+    - day_of_month
+  boolean:
+    - is_weekend
+    - is_month_start
+    - is_holiday
+    - in_festival_leadup
+    - salary_window
+    - perishable
+  categorical:                  # LightGBM native categorical
+    - sku_id
+    - category
+    - family
+    - region
+    - abc
+    - xyz
+    - intermittency
+  target: units
+  weight: sample_weight

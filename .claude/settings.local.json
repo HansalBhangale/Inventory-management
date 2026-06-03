@@ -35,7 +35,8 @@
       "Bash(ls \"C:\\\\Users\\\\bhang\\\\.claude\\\\projects\\\\c--Users-bhang-OneDrive-Desktop-DataScience-Projects-Inventory-management\\\\memory\\\\\" 2>&1; echo \"---\"; cat \"C:\\\\Users\\\\bhang\\\\.claude\\\\projects\\\\c--Users-bhang-OneDrive-Desktop-DataScience-Projects-Inventory-management\\\\memory\\\\MEMORY.md\" 2>&1 | head)",
       "Read(//c/Users/bhang/.claude/projects/c--Users-bhang-OneDrive-Desktop-DataScience-Projects-Inventory-management/**)",
       "Bash(./.venv/Scripts/python.exe -m src.features.panel --stores CA_1)",
-      "Bash(./.venv/Scripts/python.exe -m src.evaluate.splits)"
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.splits)",
+      "Bash(./.venv/Scripts/python.exe -m src.features.build_features --stores CA_1)"
     ]
   }
 }
