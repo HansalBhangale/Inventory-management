@@ -36,7 +36,13 @@
       "Read(//c/Users/bhang/.claude/projects/c--Users-bhang-OneDrive-Desktop-DataScience-Projects-Inventory-management/**)",
       "Bash(./.venv/Scripts/python.exe -m src.features.panel --stores CA_1)",
       "Bash(./.venv/Scripts/python.exe -m src.evaluate.splits)",
-      "Bash(./.venv/Scripts/python.exe -m src.features.build_features --stores CA_1)"
+      "Bash(./.venv/Scripts/python.exe -m src.features.build_features --stores CA_1)",
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.backtest --stores CA_1 --folds 1)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_metrics.py -q)",
+      "Bash(tasklist)",
+      "Bash(sort -k5 -n)",
+      "Bash(./.venv/Scripts/python.exe -m pip install -q tabulate)",
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.acceptance --stores CA_1)"
     ]
   }
 }

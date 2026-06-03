@@ -30,6 +30,9 @@ river>=0.21             # incremental learning, ADWIN/Page-Hinkley/KSWIN
 kaggle>=1.6
 requests>=2.31          # weather / external APIs
 
+# --- Reporting ---
+tabulate>=0.9          # pandas .to_markdown for metric reports
+
 # --- Viz & notebooks ---
 matplotlib>=3.8
 plotly>=5.18

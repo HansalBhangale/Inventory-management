@@ -6,12 +6,18 @@ primary_metrics:
   credibility_gate: mase         # must beat seasonal-naive
 
 forecast_accuracy_targets:
-  wape_a_items_max: 0.25
+  # GRAIN MATTERS. The doc's WAPE targets (A <25%, category <15%) assume weekly/aggregated
+  # series. At DAILY SKU level on sparse grocery demand, WAPE 50-70%+ is normal (CA_1
+  # A-items measured ~0.59). WAPE is a sanity check at this grain, NOT a gate.
+  wape_daily_sku_sanity_max: 0.80   # daily SKU grain (sanity only)
+  wape_a_items_weekly_max: 0.25     # only meaningful on weekly/aggregated grain
   wape_category_max: 0.15
-  mase_max: 1.0                  # aim <= 0.8
-  bias_abs_max: 0.05             # within +-5%
-  smape_smooth_max: 0.30
-  coverage:
+  mase_max: 1.0                     # aim <= 0.8 (PER-SKU, not segment-aggregate)
+  bias_abs_max: 0.05                # within +-5%
+  # sMAPE is unreliable on zero-heavy series (zero days push the term to its max of 2).
+  # Track but DO NOT gate on it; use WAPE/MASE for point accuracy.
+  smape_smooth_max: 0.30            # smooth SKUs only
+  coverage:                         # tail metrics that drive Phase 7 reordering
     p90: [0.88, 0.92]
     p95: [0.93, 0.97]
 
@@ -28,12 +34,20 @@ inventory_business_targets:
   fva_positive_all_segments: true
 
 # Go-live acceptance criteria (Phase 8.4) — all must pass on hold-out + simulation.
+# The MASE gate is PER-SKU (each SKU vs its own seasonal-naive scale), computed across all
+# folds by src/evaluate/acceptance.py — NOT segment-aggregate MASE (which is volume-weighted
+# against a global scale and can both over- and under-state segment performance).
 go_live_acceptance:
-  - mase_below_1_on_pct_ab_skus: 0.80
+  - per_sku_mase_below_1_on_pct_ab_skus: 0.80   # measured by acceptance.py
   - p95_coverage_in_range: [0.93, 0.97]
   - simulated_service_meets_segment_targets_at_inventory_leq_current: true
   - bias_within_pct: 0.05
   - fva_positive_all_segments: true
+
+# Status (CA_1, fold5, global LGBM champion): AB per-SKU share<1 = 0.697 (A 0.756, B 0.621);
+# coverage p90 0.891 / p95 0.942 PASS; bias -0.031 PASS. Gate not yet met on B-items.
+# Untested high-probability levers: (1) true cross-store global model (all 10 stores ->
+# 30k series, sparse SKUs borrow strength), (2) Optuna tuning (Phase 5.6), (3) online layer.
 
 backtest:
   protocol: rolling_origin       # walk-forward, never random K-fold

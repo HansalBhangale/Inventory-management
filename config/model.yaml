@@ -44,11 +44,19 @@ lightgbm:
 
 # Per-segment model routing (Phase 5.7). Segments come from EDA (Phase 2.2).
 routing:
-  smooth: global_lgbm
-  erratic: global_lgbm
-  intermittent: tsb            # Croston/SBA/TSB family
-  lumpy: tsb
-  cold_start: category_model   # attributes + aggregate-and-distribute
+  # NOTE (evidence, CA_1 per-SKU MASE, fold5): the global LGBM beats both the doc's
+  # prescriptions on M5 grocery. Defaults below keep LGBM everywhere; flip these to
+  # re-test once trained on all stores / after Optuna tuning.
+  cold_start: category_model   # attributes + aggregate-and-distribute (still recommended)
+
+  # Intermittent/lumpy routing: doc prescribes TSB, but TSB (flat rate) discards the
+  # day-of-week structure that M5 intermittent items retain, so it LOST to LGBM
+  # (intermittent share<1: 0.596 lgbm -> 0.554 tsb). Keep lgbm; options: lgbm|tsb|sba.
+  intermittent_model: lgbm
+
+  # A-items: w*lgbm + (1-w)*seasonal_naive. Blend sweep showed blending HURTS A
+  # (median MASE 0.79 @ w=1.0 -> 0.99 @ w=0.0). Keep pure LGBM (1.0).
+  a_blend_weight: 1.0
 
 # Hybrid continuous-learning (Phase 6).
 continuous_learning:
