@@ -48,7 +48,7 @@ class GlobalLGBM:
         if not self.feats:
             self.feats, self.cats = feature_columns()
 
-    def _train_one(self, train: pd.DataFrame, valid: pd.DataFrame, objective: str, alpha=None):
+    def _train_with(self, dtr, dva, objective: str, alpha=None):
         p = dict(self.params)
         n_est = p.pop("n_estimators", 2000)
         early = p.pop("early_stopping_rounds", 100)
@@ -57,24 +57,31 @@ class GlobalLGBM:
             p["alpha"] = alpha
         if objective == "tweedie":
             p["tweedie_variance_power"] = CONFIG.model.get("tweedie_variance_power", 1.2)
-
-        Xtr, Xva = _prep(train, self.feats, self.cats), _prep(valid, self.feats, self.cats)
-        dtr = lgb.Dataset(Xtr, label=train["units"].to_numpy(),
-                          weight=train["sample_weight"].to_numpy(),
-                          categorical_feature=self.cats, free_raw_data=False)
-        dva = lgb.Dataset(Xva, label=valid["units"].to_numpy(),
-                          categorical_feature=self.cats, reference=dtr, free_raw_data=False)
         return lgb.train(
             p, dtr, num_boost_round=n_est, valid_sets=[dva],
             callbacks=[lgb.early_stopping(early, verbose=False), lgb.log_evaluation(0)],
         )
 
     def fit(self, train: pd.DataFrame, valid: pd.DataFrame) -> "GlobalLGBM":
+        # Build & bin the dataset ONCE and reuse across all 4 heads (central + 3 quantiles).
+        # construct() then free_raw_data=True drops the raw float matrix after binning, so we
+        # don't hold 4 copies — critical for the ~27M-row all-stores training load.
+        import gc
+        Xtr = _prep(train, self.feats, self.cats)
+        Xva = _prep(valid, self.feats, self.cats)
+        dtr = lgb.Dataset(Xtr, label=train["units"].to_numpy(),
+                          weight=train["sample_weight"].to_numpy(),
+                          categorical_feature=self.cats, free_raw_data=True)
+        dva = lgb.Dataset(Xva, label=valid["units"].to_numpy(),
+                          categorical_feature=self.cats, reference=dtr, free_raw_data=True)
+        dtr.construct(); dva.construct()
+        del Xtr, Xva; gc.collect()
+
         print(f"  training central ({self.central_objective}) ...")
-        self.central_ = self._train_one(train, valid, self.central_objective)
+        self.central_ = self._train_with(dtr, dva, self.central_objective)
         for q in self.quantiles:
             print(f"  training quantile head q={q} ...")
-            self.quantile_[q] = self._train_one(train, valid, "quantile", alpha=q)
+            self.quantile_[q] = self._train_with(dtr, dva, "quantile", alpha=q)
         return self
 
     def predict(self, df: pd.DataFrame) -> pd.DataFrame:

@@ -33,8 +33,14 @@ FEATURES = CONFIG.data_dir / "features"
 FP = (FEATURES / "feature_panel.parquet").as_posix()
 
 
-def _load(where_sql: str, cols: list[str]) -> pd.DataFrame:
-    sel = ", ".join(dict.fromkeys(cols))  # de-dup preserve order
+def _load(where_sql: str, cols: list[str], float_cols: set[str] | None = None) -> pd.DataFrame:
+    float_cols = float_cols or set()
+    # Cast numerics to FLOAT (float32) in SQL so the dataframe arrives half-size — avoids the
+    # float64 block-consolidation spike that OOMs on the ~45M-row all-stores training load.
+    sel = ", ".join(
+        f"CAST({c} AS FLOAT) AS {c}" if c in float_cols else c
+        for c in dict.fromkeys(cols)
+    )
     return duckdb.connect().execute(
         f"SELECT {sel} FROM read_parquet('{FP}/**/*.parquet') WHERE {where_sql}"
     ).df()
@@ -44,6 +50,12 @@ def run(stores: list[str] | None, n_folds: int) -> pd.DataFrame:
     feats, cats = feature_columns()
     keep = feats + ["units", "sample_weight", "date", "store_id", "sku_id",
                     "abc", "intermittency"]
+    # everything that isn't a categorical or a key/date is loaded as float32
+    non_float = set(cats) | {"date", "store_id", "sku_id", "abc", "intermittency"}
+    float_cols = {c for c in keep if c not in non_float}
+
+    # rolling training window (Phase 6.2): retrain on the last N months, not all history.
+    window_days = int(CONFIG.model["continuous_learning"]["base_model_retrain_window_months"] * 30)
 
     store_filt = ""
     if stores:
@@ -63,10 +75,13 @@ def run(stores: list[str] | None, n_folds: int) -> pd.DataFrame:
         # internal early-stopping validation = last `horizon` days before the embargo
         es_end = f.train_end
         es_start = es_end - timedelta(days=CONFIG.horizon - 1)
-        train = _load(f"date <= '{es_start - timedelta(days=1)}'{store_filt}", keep)
-        es_val = _load(f"date BETWEEN '{es_start}' AND '{es_end}'{store_filt}", keep)
-        valid = _load(f"date BETWEEN '{f.valid_start}' AND '{f.valid_end}'{store_filt}", keep)
-        print(f"  train={len(train):,} es_val={len(es_val):,} valid={len(valid):,}")
+        train_lo = es_start - timedelta(days=window_days)
+        train = _load(f"date BETWEEN '{train_lo}' AND '{es_start - timedelta(days=1)}'{store_filt}",
+                      keep, float_cols)
+        es_val = _load(f"date BETWEEN '{es_start}' AND '{es_end}'{store_filt}", keep, float_cols)
+        valid = _load(f"date BETWEEN '{f.valid_start}' AND '{f.valid_end}'{store_filt}", keep, float_cols)
+        print(f"  train={len(train):,} (window {train_lo}..{es_start - timedelta(days=1)}) "
+              f"es_val={len(es_val):,} valid={len(valid):,}")
 
         model = GlobalLGBM().fit(train, es_val)
         preds = model.predict(valid)
