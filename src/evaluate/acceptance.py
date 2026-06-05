@@ -76,14 +76,26 @@ def _gate_row(mase_df, label, segs=("A", "B", "C")) -> dict:
 
 
 def _add_routing(preds: pd.DataFrame, stores) -> pd.DataFrame:
-    """Reconstruct pred_final (routed) per fold by computing TSB for that fold's window."""
+    """Reconstruct pred_final (routed) per fold, FORCING TSB substitution (compare mode).
+
+    apply_routing is config-gated (intermittent_model defaults to lgbm), so here we override
+    it to 'tsb' to make the comparison meaningful, and report how many rows actually changed.
+    """
     parts = []
     for fold, g in preds.groupby("fold"):
         valid_start, valid_end = g["date"].min(), g["date"].max()
         train_end = (valid_start - pd.Timedelta(days=EMBARGO + 1)).date()
         tsb = forecast_intermittent(stores, train_end, valid_end.date())
+        # normalize keys to str so a category/object dtype mismatch can't silently drop rows
+        for k in ("store_id", "sku_id"):
+            g[k] = g[k].astype("string")
+            tsb[k] = tsb[k].astype("string")
         g = g.merge(tsb, on=["store_id", "sku_id"], how="left")
-        g["pred_final"] = apply_routing(g)
+        matched = g["pred_tsb"].notna().sum()
+        g["pred_final"] = apply_routing(g, intermittent_model="tsb")  # FORCE TSB
+        changed = (g["pred_final"].round(6) != g["pred_central"].round(6)).sum()
+        print(f"  fold {fold}: TSB matched {matched:,} rows; "
+              f"routed differs from lgbm on {changed:,} rows")
         parts.append(g)
     return pd.concat(parts, ignore_index=True)
 
