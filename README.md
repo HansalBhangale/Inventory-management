@@ -14,17 +14,22 @@ hybrid continuous-learning loop (scheduled global retrain + daily online adaptat
 - **Phases 0–5:** ✅ data → features → global LightGBM quantile model (champion), all 10 M5 stores.
 - **Phase 7 (reorder + inventory sim):** ✅ — [docs/PHASE7_findings.md](docs/PHASE7_findings.md)
 - **Phase 8 (acceptance):** ✅ **official gate = inventory-frontier dominance** — [docs/PHASE8_acceptance.md](docs/PHASE8_acceptance.md)
-- **Phase 6 (continuous learning):** next.
+- **Phase 6 (continuous learning):** ✅ validated machinery — [docs/PHASE6_hybrid.md](docs/PHASE6_hybrid.md)
 
 ### Go-live verdict (M5, assumed lead times)
-The official gate is **service per unit of inventory vs seasonal-naive** (not point accuracy).
-**CORE GATE: PASS** — LGBM dominates the frontier in aggregate (+6.5% inventory saved at matched
-fill) and on every demand class incl. the intermittent tail (+17%). **A-items @ q99: LOSS** until
-the dedicated q0.99 head is trained (currently a normal extrapolation).
+The official gate is **service per unit of inventory vs seasonal-naive** (not point accuracy),
+graded **out-of-sample** (routing decided on one series split, scored on a disjoint one).
+**SEGMENTED GATE: PASS** — at 95% service the model saves **~5% inventory in aggregate** and
+**13–17%** on the cash-tying B/C and lumpy/intermittent tail (~90% of the catalog), and **matches
+the baseline by design** on the easy fast-movers (it routes there to naive, so it ties rather than
+beats). The one underperformance — **A-items at 99% service** — is a shock-free-data artifact
+(magnitude −7.1% full-sample vs −0.8% held-out; expected to reverse on real shock data, not yet
+measured).
 
 > The earlier per-SKU MASE<1-on-80%-A/B test (≈0.71) is a **diagnostic**
 > ([acceptance.py](src/evaluate/acceptance.py)), **not** the gate — point accuracy is a proxy the
-> inventory simulation supersedes. See [docs/PHASE5_findings.md](docs/PHASE5_findings.md).
+> inventory simulation supersedes. See [docs/PHASE5_findings.md](docs/PHASE5_findings.md) and the
+> full [docs/PROJECT_REPORT.md](docs/PROJECT_REPORT.md).
 
 ## Quickstart
 

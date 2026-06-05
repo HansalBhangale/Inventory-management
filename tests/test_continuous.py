@@ -46,6 +46,63 @@ def test_adjust_keeps_quantiles_nonneg_and_sorted():
     assert all(v >= 0 for v in vals) and vals == sorted(vals)
 
 
+# --- online layer must PRESERVE quantile calibration (the business-critical property) --------
+
+def _coverage_after_correction(kind, seed=7):
+    """Stream a drift, correct with the online layer, return post-adaptation tail coverage of the
+    CORRECTED quantiles (and the stale base, for contrast)."""
+    from scipy.stats import norm, poisson
+    rng = np.random.default_rng(seed)
+    if kind == "location":          # level shift, constant spread
+        mu0, mu1, sig = 10.0, 20.0, 2.0
+        base = {"pred_q50": mu0, "pred_q90": mu0 + norm.ppf(.9) * sig,
+                "pred_q95": mu0 + norm.ppf(.95) * sig, "pred_q99": mu0 + norm.ppf(.99) * sig}
+        central, draw, mus = mu0, (lambda m: rng.normal(m, sig)), (mu0, mu1)
+    else:                            # count: variance grows with the mean
+        l0, l1 = 5.0, 15.0
+        base = {"pred_q50": poisson.ppf(.5, l0), "pred_q90": poisson.ppf(.9, l0),
+                "pred_q95": poisson.ppf(.95, l0), "pred_q99": poisson.ppf(.99, l0)}
+        central, draw, mus = l0, (lambda l: rng.poisson(l)), (l0, l1)
+
+    c = OnlineResidualCorrector(lr=0.05)
+    T = 8000
+    cb = {k: 0 for k in ("pred_q90", "pred_q95", "pred_q99")}
+    cc = dict(cb)
+    n = 0
+    for t in range(T):
+        m = mus[0] if t < T // 2 else mus[1]
+        a = draw(m)
+        feat = {"dow": float(t % 7)}
+        adj = c.adjust(base, feat)
+        if t >= int(0.8 * T):       # post-drift, post-adaptation
+            for k in cb:
+                cb[k] += a <= base[k]
+                cc[k] += a <= adj[k]
+            n += 1
+        c.learn_one(feat, a - central)
+    return {k: cb[k] / n for k in cb}, {k: cc[k] / n for k in cc}
+
+
+def test_online_preserves_tail_calibration_under_location_shift():
+    # Under a pure level shift the location correction must RESTORE tail coverage to nominal —
+    # this is what the reorder engine depends on after the online layer adapts.
+    stale, corr = _coverage_after_correction("location")
+    assert stale["pred_q95"] < 0.5                       # stale base is broken post-drift
+    assert 0.87 <= corr["pred_q90"] <= 0.93
+    assert 0.93 <= corr["pred_q95"] <= 0.97
+    assert 0.965 <= corr["pred_q99"] <= 0.998
+
+
+def test_online_undercovers_tail_under_magnitude_drift():
+    # Characterization (known limitation): when demand MAGNITUDE grows, spread should widen but a
+    # location-only correction can't — so the upper tail under-covers. This is WHY the drift
+    # detector triggers a base RETRAIN (slow path) instead of trusting the online layer for the
+    # tail. Encoded so the limitation can't silently regress into a false "calibrated" claim.
+    stale, corr = _coverage_after_correction("magnitude")
+    assert corr["pred_q95"] > stale["pred_q95"] + 0.3    # online still helps a lot
+    assert corr["pred_q95"] < 0.93                        # but does NOT reach the P95 band
+
+
 # --- drift detection ---------------------------------------------------------
 
 def test_drift_fires_after_injected_shift():

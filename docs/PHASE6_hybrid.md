@@ -11,9 +11,17 @@
 
 - shift injected at step 400; alarms=1; first alarm after shift at step 416 (latency 16 steps); **zero alarms while stationary**.
 
-## 3. Online corrector on REAL M5 residuals (the honest caveat, measured)
+## 3. Does the online correction PRESERVE tail calibration? (business-critical)
 
-- 6,300 held-out obs: base MAE 0.9353 vs corrected 0.9602. ~neutral, as expected — the base forecast's residuals on a shock-free extract are near-zero-mean noise with nothing for the fast layer to exploit. On live data with drift/promos, this is where it earns its keep.
+The reorder engine depends on calibrated tails. The online layer applies a single location correction to all quantiles, so it must keep P90/P95/P99 coverage in band after it adapts. Post-adaptation coverage vs a stale-but-once-calibrated base:
+
+- **Location shift** (level moves, spread constant): P90 0.902 · P95 0.952 · P99 0.992 — **restored to nominal**. Safe.
+- **Magnitude drift** (demand 5→15, spread should widen): P90 0.77 · P95 0.839 · P99 0.925 — recovers most but **under-covers the upper tail**, because a location-only correction cannot widen the distribution.
+- **Consequence (the hybrid justifying itself):** the online layer is trusted for LEVEL drift only; tail recalibration under magnitude growth is the job of the drift-triggered base RETRAIN (slow path). The online layer must never be relied on to maintain the tail the reorder engine reads. (Tests: test_continuous.py.)
+
+## 4. Online corrector on REAL M5 residuals (the honest caveat, measured)
+
+- 6,300 held-out obs: base MAE 1.0556 vs corrected 1.0757. ~neutral, as expected — the base forecast's residuals on a shock-free extract are near-zero-mean noise with nothing for the fast layer to exploit. On live data with drift/promos, this is where it earns its keep.
 
 ## Components
 

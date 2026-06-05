@@ -83,9 +83,45 @@ def demo_real_residuals(n_series=300) -> dict:
     return {"n_obs": int(n), "base_mae": base_mae / max(n, 1), "corr_mae": corr_mae / max(n, 1)}
 
 
+def demo_calibration() -> dict:
+    """Does the online correction PRESERVE tail coverage after it adapts? Test two drift types
+    against a stale-but-once-calibrated base; report post-adaptation P90/P95/P99 coverage."""
+    from scipy.stats import norm, poisson
+    out = {}
+    for kind in ("location", "magnitude"):
+        rng = np.random.default_rng(7)
+        if kind == "location":
+            mu0, mu1, sig = 10.0, 20.0, 2.0
+            base = {"pred_q90": mu0 + norm.ppf(.9) * sig, "pred_q95": mu0 + norm.ppf(.95) * sig,
+                    "pred_q99": mu0 + norm.ppf(.99) * sig}
+            central, draw, mus = mu0, (lambda m: rng.normal(m, sig)), (mu0, mu1)
+        else:
+            l0, l1 = 5.0, 15.0
+            base = {"pred_q90": poisson.ppf(.9, l0), "pred_q95": poisson.ppf(.95, l0),
+                    "pred_q99": poisson.ppf(.99, l0)}
+            central, draw, mus = l0, (lambda l: rng.poisson(l)), (l0, l1)
+        c = OnlineResidualCorrector(lr=0.05)
+        T = 8000
+        cc = {k: 0 for k in base}
+        n = 0
+        for t in range(T):
+            m = mus[0] if t < T // 2 else mus[1]
+            a = draw(m)
+            feat = {"dow": float(t % 7)}
+            adj = c.adjust(base, feat)
+            if t >= int(0.8 * T):
+                for k in cc:
+                    cc[k] += a <= adj[k]
+                n += 1
+            c.learn_one(feat, a - central)
+        out[kind] = {k: round(cc[k] / n, 3) for k in cc}
+    return out
+
+
 def main() -> int:
     syn = demo_synthetic_shift()
     drift = demo_drift_latency()
+    cal = demo_calibration()
     real = demo_real_residuals()
 
     out = Path(CONFIG.root) / "docs" / "PHASE6_hybrid.md"
@@ -104,7 +140,22 @@ def main() -> int:
         f"- shift injected at step {drift['shift_at']}; alarms={drift['n_alarms']}; "
         f"first alarm after shift at step {drift['first_alarm_after_shift']} "
         f"(latency {drift['latency']} steps); **zero alarms while stationary**.\n",
-        "## 3. Online corrector on REAL M5 residuals (the honest caveat, measured)\n",
+        "## 3. Does the online correction PRESERVE tail calibration? (business-critical)\n",
+        "The reorder engine depends on calibrated tails. The online layer applies a single "
+        "location correction to all quantiles, so it must keep P90/P95/P99 coverage in band after "
+        "it adapts. Post-adaptation coverage vs a stale-but-once-calibrated base:\n",
+        f"- **Location shift** (level moves, spread constant): "
+        f"P90 {cal['location']['pred_q90']} · P95 {cal['location']['pred_q95']} · "
+        f"P99 {cal['location']['pred_q99']} — **restored to nominal**. Safe.\n"
+        f"- **Magnitude drift** (demand 5→15, spread should widen): "
+        f"P90 {cal['magnitude']['pred_q90']} · P95 {cal['magnitude']['pred_q95']} · "
+        f"P99 {cal['magnitude']['pred_q99']} — recovers most but **under-covers the upper tail**, "
+        "because a location-only correction cannot widen the distribution.\n"
+        "- **Consequence (the hybrid justifying itself):** the online layer is trusted for LEVEL "
+        "drift only; tail recalibration under magnitude growth is the job of the drift-triggered "
+        "base RETRAIN (slow path). The online layer must never be relied on to maintain the tail "
+        "the reorder engine reads. (Tests: test_continuous.py.)\n",
+        "## 4. Online corrector on REAL M5 residuals (the honest caveat, measured)\n",
         f"- {real['n_obs']:,} held-out obs: base MAE {real['base_mae']:.4f} vs corrected "
         f"{real['corr_mae']:.4f}. ~neutral, as expected — the base forecast's residuals on a "
         "shock-free extract are near-zero-mean noise with nothing for the fast layer to exploit. "
@@ -119,6 +170,7 @@ def main() -> int:
     out.write_text("\n".join(str(x) for x in L), encoding="utf-8")
     print("synthetic:", syn)
     print("drift:", drift)
+    print("calibration:", cal)
     print("real:", real)
     print(f"wrote {out}")
     return 0

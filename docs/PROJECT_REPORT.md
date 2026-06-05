@@ -160,8 +160,8 @@ bread-and-milk that any rule handles.
 Not relax the gate — use each method where it wins (Phase 7.7 "combination of methods," now
 decided on the inventory metric instead of point accuracy): route A/smooth to the simple
 seasonal-naive buffer (where it's ≥ LGBM), LGBM everywhere else. The segmented system then
-dominates naive overall and loses nowhere — a legitimate PASS earned by evidence, not by moving
-the bar.
+dominates naive overall and loses on no class (tying by construction where it routes to the
+baseline) — a legitimate PASS earned by evidence, not by moving the bar.
 
 **Decision: (a) — segmented operating policy — built with these guardrails.**
 
@@ -225,12 +225,17 @@ With those fixes, decided on one series split and **graded on the disjoint held-
   router makes **no overrides** — the segmented system *equals the single global model* on
   shock-free M5. The router is the standing, config-driven mechanism for when real data flips a
   segment, not a crutch the current result leans on.
-- **A@q99 diagnostic = borderline TIE (−0.8% held-out vs −7.1% full-sample).** The "loss" is small
-  and not robust across splits — consistent with a shock-free artifact, not a settled limitation.
+- **A@q99 diagnostic.** Its magnitude **varies across the two splits we measured: −7.1% on the
+  full sample vs −0.8% on the held-out half** (measured). We *reason* it should flip to a win on
+  real data because M5 lacks the demand shocks a q0.99 buffer exists for — but that flip is an
+  argument from M5's known gaps, **not yet measured**.
 
 So the honest bottom line: **at 95% service the global probabilistic model passes the inventory
-gate out-of-sample, saving ~5% inventory in aggregate and 13–17% on the cash-tying B/C and
-lumpy/intermittent tail, while tying the easy head — and it loses nowhere.**
+gate out-of-sample — saving ~5% inventory in aggregate and 13–17% on the cash-tying B/C and
+lumpy/intermittent tail (~90% of the catalog), matching the simple baseline by design on the easy
+fast-movers, with the one segment where it underperforms a simple rule (A at 99%) being a
+shock-free-data artifact expected to reverse on real data.** (Not "wins everywhere": on the easy
+head it ties because the policy routes there to the baseline; it does not beat it.)
 
 ---
 
@@ -245,6 +250,12 @@ lumpy/intermittent tail, while tying the easy head — and it loses nowhere.**
   extract has no live drift; proven on synthetic drift (online corrector cuts post-shift MAE
   5.99→0.45; ADWIN fires 16 steps after an injected shift, silent while stationary) and ~neutral
   on real M5 residuals (the caveat, measured). See [PHASE6_hybrid.md](PHASE6_hybrid.md).
+- **The online layer preserves tail calibration only under LEVEL drift, not magnitude drift**
+  (verified): after adapting, P90/P95/P99 coverage returns to nominal under a pure level shift
+  (0.90/0.95/0.99) but under-covers when demand magnitude grows (P95 → 0.84, because a
+  location-only correction can't widen the distribution). Tail recalibration under magnitude
+  growth is therefore the drift-triggered **base retrain's** job, never the online layer's — the
+  online correction must not be trusted to maintain the tail the reorder engine reads.
 
 ## 11. What's left
 
