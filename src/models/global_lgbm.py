@@ -29,7 +29,8 @@ def _prep(df: pd.DataFrame, feats: list[str], cats: list[str]) -> pd.DataFrame:
         X[c] = X[c].astype("category")
     for c in feats:
         if c not in cats:
-            X[c] = pd.to_numeric(X[c], errors="coerce")
+            # float32 halves memory vs float64 — material for the all-stores run (~47M rows)
+            X[c] = pd.to_numeric(X[c], errors="coerce").astype("float32")
     return X
 
 
