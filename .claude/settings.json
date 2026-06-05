@@ -4,7 +4,9 @@
       "Bash(git commit -q -m ' *)",
       "Bash(git commit -q -m 'test: update quantile assertion for q0.99 head \\(Phase 8\\) *)",
       "Bash(./.venv/Scripts/python.exe -c ' *)",
-      "Bash(./.venv/Scripts/python.exe -m src.evaluate.operating_policy)"
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.operating_policy)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_continuous.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m src.continuous.validate_hybrid)"
     ]
   }
 }
