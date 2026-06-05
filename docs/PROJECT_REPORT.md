@@ -241,15 +241,17 @@ lumpy/intermittent tail, while tying the easy head — and it loses nowhere.**
   Trustworthy absolute numbers require a real store's data.
 - **Intermittent daily demand is near an irreducible ceiling** — confirmed by the cross-learning
   plateau; not a tuning gap.
-- **Continuous learning (Phase 6) cannot be *demonstrated* on M5** — a fixed historical extract
-  has no live drift to detect; it will be built as **validated machinery**, not a proven win.
+- **Continuous learning (Phase 6) is *validated machinery*, not a demonstrated win** — a fixed
+  extract has no live drift; proven on synthetic drift (online corrector cuts post-shift MAE
+  5.99→0.45; ADWIN fires 16 steps after an injected shift, silent while stationary) and ~neutral
+  on real M5 residuals (the caveat, measured). See [PHASE6_hybrid.md](PHASE6_hybrid.md).
 
 ## 11. What's left
 
 | Phase | Status |
 |---|---|
 | 8 — Acceptance gate | ✅ PASS out-of-sample via segmented operating policy (router dormant at q95) |
-| 6 — Hybrid continuous learning (online layer, drift detection, champion/challenger) | next; promotion criterion = the **frontier metric**, not MASE/WAPE |
+| 6 — Hybrid continuous learning (online layer, drift, champion/challenger on frontier metric) | ✅ validated machinery |
 | 9 — Deployment (orchestration DAG, serving, CI gates) | not started |
 | 10 — Monitoring (Evidently, feedback loop) | not started |
 | Quick wins | A-item per-segment quantile calibration; switch routing decisions onto live store data |
