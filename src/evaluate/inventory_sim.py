@@ -48,9 +48,13 @@ METHODS = {  # method -> (quantile col template, point col)
 
 def _load_series(sample_per_class: int) -> tuple[pd.DataFrame, dict]:
     """Load stitched contiguous prediction window + per-series avg price, stratified sample."""
+    # Load every quantile head present (incl. pred_q99 once trained) so the sim uses the real
+    # quantiles, not a subset.
+    avail = duckdb.connect().execute(f"SELECT * FROM read_parquet('{PRED}') LIMIT 0").df().columns
+    qcols_sql = ", ".join(c for c in avail if c.startswith("pred_q"))
     df = duckdb.connect().execute(f"""
         SELECT store_id, sku_id, date, intermittency, abc, units,
-               pred_q50, pred_q90, pred_q95, seasonal_naive, moving_average
+               {qcols_sql}, seasonal_naive, moving_average
         FROM read_parquet('{PRED}') ORDER BY store_id, sku_id, date
     """).df()
     dates = sorted(df["date"].unique())
@@ -72,36 +76,46 @@ def _load_series(sample_per_class: int) -> tuple[pd.DataFrame, dict]:
     return df, pmap
 
 
-def simulate_series(y, point, sigma_day, P, order_cycle, lt, moq, pack, warmup, rng,
-                    z: float, sigma_L: float) -> dict:
-    """Day-by-day (s,S) sim for one series. Returns served/demanded/inv/lost over post-warmup.
+def plan_levels(point, daily_buffer, sigma_e, z, sigma_L, P, order_cycle):
+    """Vectorized (s,S) per day. Two buffer modes, both with correct √P scaling:
 
-    Unified, correct demand-over-horizon aggregation for BOTH model and baselines:
-      mean over P   = look-ahead sum of the daily point forecast   (captures DOW/structure)
-      buffer        = z(q)·sigma_day·sqrt(P)  +  z(q)·d_bar·sigma_L (demand √P + supply σ_L)
-    sigma_day is the per-day demand std: from the model's quantiles ((q95-q50)/1.645) for LGBM,
-    or the point forecast's error std for baselines. This avoids the sum-of-quantiles over-buffer.
+      empirical (LGBM, uses the TRAINED quantiles): the per-day demand buffer is
+        (q_forecast − q50); summed over P and divided by √P it equals the independent-day
+        buffer z·σ̄·√P, but reads the model's actual (possibly fat-tailed) quantile — so the
+        trained q0.99 head feeds the reorder point directly.
+      normal (baselines, no quantiles): z(q)·σ_e·√P from the point-forecast error std.
+
+    Supply-side risk z·d_bar·σ_L is added for both (doc 7.3).
     """
-    T = len(y)
+    T = len(point)
     pad = int(P + order_cycle + 2)
-    pt_p = np.concatenate([point, np.full(pad, point[-1])])
-    csum = np.concatenate([[0.0], np.cumsum(pt_p)])
+    csum_m = np.concatenate([[0.0], np.cumsum(np.concatenate([point, np.full(pad, point[-1])]))])
     d_bar = max(float(point.mean()), 1e-6)
     supply = z * d_bar * sigma_L
-    buf_P = z * sigma_day * np.sqrt(P) + supply
-    buf_PC = z * sigma_day * np.sqrt(P + order_cycle) + supply
 
-    def levels(t):
-        sP = (csum[t + P] - csum[t]) + buf_P
-        sPC = (csum[t + P + order_cycle] - csum[t]) + buf_PC
-        s = max(0.0, sP)
-        S = max(s, sPC)
-        return s, S
+    if daily_buffer is not None:   # empirical
+        csum_b = np.concatenate([[0.0], np.cumsum(np.concatenate([daily_buffer,
+                                                                  np.full(pad, daily_buffer[-1])]))])
+        bufP = (csum_b[np.arange(T) + P] - csum_b[:T]) / np.sqrt(P)
+        bufPC = (csum_b[np.arange(T) + P + order_cycle] - csum_b[:T]) / np.sqrt(P + order_cycle)
+    else:                          # normal
+        bufP = z * sigma_e * np.sqrt(P)
+        bufPC = z * sigma_e * np.sqrt(P + order_cycle)
 
-    s0, S0 = levels(0)
-    on_hand = S0
+    idx = np.arange(T)
+    meanP = csum_m[idx + P] - csum_m[idx]
+    meanPC = csum_m[idx + P + order_cycle] - csum_m[idx]
+    s_arr = np.maximum(0.0, meanP + bufP + supply)
+    S_arr = np.maximum(s_arr, meanPC + bufPC + supply)
+    return s_arr, S_arr
+
+
+def simulate_inventory(y, s_arr, S_arr, lt, moq, pack, warmup, rng) -> dict:
+    """Day-by-day (s,S) inventory dynamics given precomputed daily s/S levels (lost-sales)."""
+    T = len(y)
+    on_hand = float(S_arr[0])
     on_order = 0.0
-    pipeline = np.zeros(T + pad)
+    pipeline = np.zeros(T + int(lt.mean + 3 * lt.std) + 5)
     served = demanded = inv_sum = lost = 0.0
     stockout_days = n_eff = 0
     for t in range(T):
@@ -116,10 +130,9 @@ def simulate_series(y, point, sigma_day, P, order_cycle, lt, moq, pack, warmup, 
             if d > 0 and srv < d - 1e-9:
                 stockout_days += 1
             n_eff += 1
-        s, S = levels(t)
         IP = on_hand + on_order
-        if IP <= s:
-            qty = round_order(S - IP, moq, pack)
+        if IP <= s_arr[t]:
+            qty = round_order(S_arr[t] - IP, moq, pack)
             if qty > 0:
                 arrday = t + lt.sample(rng)
                 if arrday < len(pipeline):
@@ -150,23 +163,27 @@ def run(sample_per_class: int) -> pd.DataFrame:
         inter = g["intermittency"].iloc[0]
         abc = g["abc"].iloc[0]
         price = float(pmap.get((store, sku), 1.0) or 1.0)
-        cols = {"pred_q50": g["pred_q50"].to_numpy("float64"),
-                "pred_q90": g["pred_q90"].to_numpy("float64"),
-                "pred_q95": g["pred_q95"].to_numpy("float64"),
-                "seasonal_naive": g["seasonal_naive"].fillna(0).to_numpy("float64"),
-                "moving_average": g["moving_average"].fillna(0).to_numpy("float64")}
-        # per-day demand std: LGBM reads it from its calibrated quantiles (conditional, fair);
-        # baselines use their point forecast's error std (a single flat number).
-        sigma_lgbm = float(np.mean(np.maximum(cols["pred_q95"] - cols["pred_q50"], 0) / 1.645))
+        q50 = g["pred_q50"].to_numpy("float64")
+        qcols = {qq: g[f"pred_q{int(qq*100)}"].to_numpy("float64")
+                 for qq in qs if f"pred_q{int(qq*100)}" in g.columns}
+        points = {"lgbm": q50,
+                  "seasonal_naive": g["seasonal_naive"].fillna(0).to_numpy("float64"),
+                  "moving_average": g["moving_average"].fillna(0).to_numpy("float64")}
         for method, (qtmpl, pointcol) in METHODS.items():
-            point = cols[pointcol]
-            sigma_day = sigma_lgbm if method == "lgbm" else float(np.std(y - point))
+            point = points["lgbm"] if method == "lgbm" else points[method]
+            sigma_e = float(np.std(y - point))   # for baseline normal buffer
             for q in qs:
                 z = max(0.0, float(norm.ppf(q)))
+                if method == "lgbm":
+                    if q not in qcols:           # quantile head not trained -> skip
+                        continue
+                    daily_buffer = np.maximum(qcols[q] - q50, 0.0)
+                else:
+                    daily_buffer = None
                 for rname, lt in regs.items():
                     P = int(round(lt.mean)) + R
-                    m = simulate_series(y, point, sigma_day, P, C, lt, moq, pack,
-                                        warmup, rng, z, lt.std)
+                    s_arr, S_arr = plan_levels(point, daily_buffer, sigma_e, z, lt.std, P, C)
+                    m = simulate_inventory(y, s_arr, S_arr, lt, moq, pack, warmup, rng)
                     rows.append({"store_id": store, "sku_id": sku, "intermittency": inter,
                                  "abc": abc, "price": price, "method": method, "q": q,
                                  "regime": rname, **m})
