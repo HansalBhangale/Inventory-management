@@ -41,3 +41,26 @@ exceptions:
   low_confidence_coverage_gap: 0.05
   flag_perishables_near_expiry_days: 3
   flag_newly_drifting: true
+
+# Inventory simulation (Phase 8.1) — replay forecasts -> reorder -> simulated inventory.
+# IMPORTANT: M5 has NO real lead times / inventory / costs. These are ASSUMPTIONS. The sim's
+# job here is to validate the reorder MACHINERY and the service-vs-inventory FRONTIER, not to
+# produce quotable service-level numbers. Every result is stamped with its lead-time regime.
+simulation:
+  # Stochastic lead time per order ~ clipped Normal(mean, std). Value of the upper-tail
+  # forecast grows with lead time, so we sweep regimes rather than assume one.
+  lead_time_regimes:
+    short: {mean: 1, std: 0.0}
+    base:  {mean: 3, std: 1.0}
+    long:  {mean: 7, std: 2.0}
+  review_period_days: 1
+  order_cycle_days: 1
+  lost_sales: true             # unmet demand is lost (grocery), not backordered
+  warmup_days: 7               # excluded from metrics (let inventory reach steady state)
+  # Sweep the target service quantile to trace the service-vs-inventory frontier.
+  # LGBM uses its empirical quantiles (Route B); baselines use z(q)*sigma_error (Route A).
+  service_quantiles: [0.5, 0.9, 0.95]
+  holding_cost_frac_per_year: 0.25   # holding cost = fraction of unit value per year
+  moq_default: 1
+  pack_size_default: 1
+  sample_per_intermittency: 1500     # stratified sample size per class for the frontier grid
