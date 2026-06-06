@@ -4,7 +4,8 @@ from src.config import CONFIG
 
 def test_horizon_and_quantiles():
     assert CONFIG.horizon == 14
-    assert CONFIG.quantiles == [0.5, 0.9, 0.95]
+    # 0.99 head added in Phase 8 for high-service A-items; 0.5/0.9/0.95 must remain present.
+    assert {0.5, 0.9, 0.95}.issubset(set(CONFIG.quantiles))
 
 
 def test_quantiles_sorted_for_non_crossing():

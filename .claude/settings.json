@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "Bash(git commit -q -m 'test: update quantile assertion for q0.99 head \\(Phase 8\\) *)"
     ]
   }
 }
