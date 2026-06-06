@@ -149,9 +149,13 @@ def write_report(metrics: pd.DataFrame, stores) -> None:
         f"- **Features:** {len(feature_columns()[0])} "
         f"({len(feature_columns()[1])} native-categorical). Direct H-step, lags>=H.\n"
         f"- **Validation:** rolling-origin, {CONFIG.metrics['backtest']['embargo_days']}d embargo.\n"
-        f"- **Credibility gate:** MASE<1 vs seasonal-naive.\n"
+        f"- **Credibility gate:** per-SKU MASE<1 vs seasonal-naive (see acceptance.py).\n"
+        f"- **Routing (evidence-based, Phase 5.7):** LGBM is champion across ALL segments; "
+        f"TSB for intermittent and the A-blend were tested and REJECTED (both hurt per-SKU "
+        f"MASE on M5 grocery). Note: per-SEGMENT aggregate MASE here is volume-weighted and "
+        f"reads high on A (~1.3) — the per-SKU gate is the truth (A ~0.77).\n"
         f"- **Known limits:** M5 has no inventory/promo; censored-demand hooks inert; "
-        f"intermittent SKUs better served by TSB (Phase 5.7 routing).\n",
+        f"intermittent daily demand is near the naive-beating ceiling (gate-binding).\n",
     ]
     out.write_text("\n".join(lines), encoding="utf-8")
     print(f"wrote {out}")

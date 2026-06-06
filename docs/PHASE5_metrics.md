@@ -54,5 +54,6 @@ Scope: stores=ALL · horizon=14d · quantiles=[0.5, 0.9, 0.95]
 - **Objectives:** central `tweedie` + pinball heads [0.5, 0.9, 0.95] (non-crossing enforced).
 - **Features:** 39 (7 native-categorical). Direct H-step, lags>=H.
 - **Validation:** rolling-origin, 14d embargo.
-- **Credibility gate:** MASE<1 vs seasonal-naive.
-- **Known limits:** M5 has no inventory/promo; censored-demand hooks inert; intermittent SKUs better served by TSB (Phase 5.7 routing).
+- **Credibility gate:** per-SKU MASE<1 vs seasonal-naive (see acceptance.py).
+- **Routing (evidence-based, Phase 5.7):** LGBM is champion across ALL segments; TSB for intermittent and the A-blend were tested and REJECTED (both hurt per-SKU MASE on M5 grocery). NOTE: the per-segment aggregate MASE in the table above is volume-weighted and reads high on A (~1.33) — that is an artifact; the per-SKU gate is the truth (A ~0.77, 76.7% beat naive).
+- **Known limits:** M5 has no inventory/promo; censored-demand hooks inert; intermittent daily demand is near the naive-beating ceiling (gate-binding at AB 0.71).
