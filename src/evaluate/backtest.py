@@ -124,10 +124,12 @@ def run(stores: list[str] | None, n_folds: int) -> pd.DataFrame:
 def _score(segment, model, y, yhat, qframe, scale, fold) -> dict:
     d = {"fold": fold, "segment": segment, "model": model, "n": len(y)}
     d.update(M.all_point_metrics(y, yhat, scale))
-    if qframe is not None and "pred_q95" in qframe:
-        for q, col in [(0.5, "pred_q50"), (0.9, "pred_q90"), (0.95, "pred_q95")]:
-            d[f"pinball_q{int(q*100)}"] = M.pinball(y, qframe[col].to_numpy(), q)
-            d[f"cov_q{int(q*100)}"] = M.coverage(y, qframe[col].to_numpy())
+    if qframe is not None:
+        for q in CONFIG.quantiles:
+            col = f"pred_q{int(q * 100)}"
+            if col in qframe:
+                d[f"pinball_q{int(q*100)}"] = M.pinball(y, qframe[col].to_numpy(), q)
+                d[f"cov_q{int(q*100)}"] = M.coverage(y, qframe[col].to_numpy())
     return d
 
 

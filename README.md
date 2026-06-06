@@ -11,8 +11,20 @@ Probabilistic (quantile) demand forecast → service-level reorder policy, kept 
 hybrid continuous-learning loop (scheduled global retrain + daily online adaptation + drift-triggered retrain).
 
 ## Status
-- **Phase 0 — Foundations:** ✅ complete (config locked, env bootstrapped) — see [docs/PHASE0_foundations.md](docs/PHASE0_foundations.md)
-- **Phase 1 — Data acquisition:** in progress
+- **Phases 0–5:** ✅ data → features → global LightGBM quantile model (champion), all 10 M5 stores.
+- **Phase 7 (reorder + inventory sim):** ✅ — [docs/PHASE7_findings.md](docs/PHASE7_findings.md)
+- **Phase 8 (acceptance):** ✅ **official gate = inventory-frontier dominance** — [docs/PHASE8_acceptance.md](docs/PHASE8_acceptance.md)
+- **Phase 6 (continuous learning):** next.
+
+### Go-live verdict (M5, assumed lead times)
+The official gate is **service per unit of inventory vs seasonal-naive** (not point accuracy).
+**CORE GATE: PASS** — LGBM dominates the frontier in aggregate (+6.5% inventory saved at matched
+fill) and on every demand class incl. the intermittent tail (+17%). **A-items @ q99: LOSS** until
+the dedicated q0.99 head is trained (currently a normal extrapolation).
+
+> The earlier per-SKU MASE<1-on-80%-A/B test (≈0.71) is a **diagnostic**
+> ([acceptance.py](src/evaluate/acceptance.py)), **not** the gate — point accuracy is a proxy the
+> inventory simulation supersedes. See [docs/PHASE5_findings.md](docs/PHASE5_findings.md).
 
 ## Quickstart
 

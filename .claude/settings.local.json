@@ -47,7 +47,8 @@
       "Bash(./.venv/Scripts/python.exe -m src.evaluate.acceptance)",
       "Bash(git commit -q -m 'docs: correct stale model card \\(TSB rejected, per-SKU gate is truth, not aggregate MASE\\) *)",
       "Bash(./.venv/Scripts/python.exe -m src.evaluate.inventory_sim --sample 40)",
-      "Bash(./.venv/Scripts/python.exe -m src.evaluate.inventory_sim)"
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.inventory_sim)",
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.frontier_gate)"
     ]
   }
 }
