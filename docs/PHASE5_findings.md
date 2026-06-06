@@ -53,6 +53,31 @@ MASE baseline is *seasonal*-naive(7), the flat forecast loses. The doc's assumpt
 **Decision: `intermittent_model = lgbm`.** TSB/SBA kept config-switchable for re-test on
 more data. The global LGBM is the champion across all segments.
 
+## 3b. All-stores cross-learning result (THE decisive run)
+
+Trained the global model on **all 10 stores (30,490 series)**, 3 rolling folds. Compared to
+the CA_1 fold-5 anchor, cross-store learning helped — but **modestly**, and the intermittent
+majority barely moved:
+
+| segment / class | CA_1 fold5 share<1 | all-stores share<1 | delta |
+|---|---|---|---|
+| AB gate | 0.697 | **0.709** | +0.012 |
+| A | 0.756 | 0.767 | +0.011 |
+| B | 0.621 | 0.637 | +0.016 |
+| smooth | 0.888 | 0.907 | +0.019 |
+| erratic | 0.842 | 0.849 | +0.007 |
+| lumpy | 0.690 | 0.709 | +0.019 |
+| **intermittent (22,143 SKUs)** | 0.596 | **0.601** | **+0.005** |
+
+**Fold variance is tight** (AB share<1 = 0.666 / 0.686 / 0.693; mean 0.682, std 0.014) — the
+result is a stable signal, not a single-fold fluke. The methodology now holds up.
+
+**Verdict:** the all-stores model is the champion (best + stable), but **more data alone does
+not crack intermittent daily demand**. The 72% intermittent mass sits at median MASE ~0.92
+(barely beating a seasonal-naive that is itself decent on weekly-structured grocery). Gate
+still FAILs at 0.709 (need 0.80); binding constraint = B (0.637), which is intermittent-heavy.
+The cross-learning thesis was directionally right but has diminishing returns on the sparse mass.
+
 ## 4. Metric-target recalibration
 
 - **WAPE is not a gate at daily SKU grain.** The doc's "A-items <25%" is a weekly/aggregated

@@ -137,14 +137,14 @@ def run(stores=None, blend_sweep=False, compare_tsb=False, agg_across_folds="med
     print(f"predictions: {len(preds):,} rows · folds={folds} · "
           f"skus={preds['sku_id'].nunique():,} · stores={preds['store_id'].nunique()}")
 
-    if "pred_final" not in preds.columns:
-        if compare_tsb:
-            print("reconstructing routed predictions WITH TSB (forced) ...")
-            preds = _add_routing_tsb(preds, stores)
-            routed_label = "routed (LGBM+TSB)"
-        else:
-            preds["pred_final"] = apply_routing(preds)
-            routed_label = "routed (config)"
+    routed_label = "routed (config)"
+    if compare_tsb:
+        # force TSB substitution regardless of any pred_final the backtest saved
+        print("reconstructing routed predictions WITH TSB (forced) ...")
+        preds = _add_routing_tsb(preds, stores)
+        routed_label = "routed (LGBM+TSB)"
+    elif "pred_final" not in preds.columns:
+        preds["pred_final"] = apply_routing(preds)
 
     scale_cache: dict = {}
     variants = [("pred_central", "lgbm"), ("pred_final", routed_label),

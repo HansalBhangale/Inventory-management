@@ -43,7 +43,8 @@
       "Bash(sort -k5 -n)",
       "Bash(./.venv/Scripts/python.exe -m pip install -q tabulate)",
       "Bash(./.venv/Scripts/python.exe -m src.evaluate.acceptance --stores CA_1)",
-      "Bash(./.venv/Scripts/python.exe -m src.evaluate.acceptance --stores CA_1 --compare-tsb)"
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.acceptance --stores CA_1 --compare-tsb)",
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.acceptance)"
     ]
   }
 }
