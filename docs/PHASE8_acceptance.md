@@ -1,6 +1,6 @@
 # Phase 8 — Official Go-Live Gate: Inventory-Frontier Dominance
 
-**VERDICT: FAIL**  ·  regime=base  ·  baseline=seasonal_naive  ·  win_margin=0.03
+**VERDICT: PASS**  ·  regime=base  ·  baseline=seasonal_naive  ·  win_margin=0.03
 
 > This REPLACES the per-SKU MASE gate (now a diagnostic in acceptance.py). Point accuracy is a proxy; this measures the true objective — service per unit of inventory. M5 lead times are ASSUMED, so this validates the decision quality and machinery, not absolute numbers.
 

@@ -74,3 +74,31 @@ simulation:
   moq_default: 1
   pack_size_default: 1
   sample_per_intermittency: 1500     # stratified sample size per class for the frontier grid
+
+# Segmented operating policy (Phase 7.7 "combination of methods", decided on the INVENTORY
+# frontier, not point accuracy). MECHANISM is permanent and config-driven: per ABC tier, use the
+# reorder buffer that dominates the service-vs-inventory frontier at the operating quantile.
+# RULE: route to naive ONLY where LGBM strictly LOSES; keep LGBM on WIN and TIE (on a TIE the
+# frontiers coincide but LGBM operates leaner — routing ties to naive forfeits LGBM's aggregate
+# edge, which the out-of-sample re-gate caught).
+#
+# CURRENT VERDICT (src/evaluate/operating_policy.py, out-of-sample, operating q=0.95): at 95%
+# service NO tier strictly loses, so the map is all-LGBM and the router makes no overrides — the
+# segmented system equals the single global model on shock-free M5. The router stands ready for
+# when real data flips a segment. Re-derive when a real store's data (promos/festivals/stockouts)
+# lands.
+#
+# CONTINGENCY: A-items at the aspirational q99 target are a borderline TIE/small-loss on M5 — a
+# shock-free artifact (no spikes for the q0.99 buffer to protect against). IF A is operated at 99%
+# on such data, route A -> seasonal_naive; expected to flip back to lgbm under real spike demand.
+operating_routing:
+  decided_on: m5_shock_free_2016_q95    # provenance — re-decide on real data
+  redecide: true
+  by: abc
+  map:
+    A: lgbm
+    B: lgbm
+    C: lgbm
+  contingency:
+    A_at_q99: seasonal_naive            # only if A is operated at 99% service (artifact-driven)
+  default: lgbm
