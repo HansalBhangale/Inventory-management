@@ -17,7 +17,9 @@
       "Bash(./.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider)",
       "Bash(./.venv/Scripts/python.exe -m src.evaluate.favorita_exercise --stores 1 2 3 44 --since 2016-06-01)",
       "Bash(grep -vE \"Proactor|_get_loop|zmq|UserWarning|warnings.warn|LightGBM|remaining|elapsed|%|^\\\\s*$\")",
-      "Bash(grep -vE \"Proactor|_get_loop|zmq|UserWarning|warnings.warn|LightGBM|remaining|elapsed|%|^\\\\s*$|training\")"
+      "Bash(grep -vE \"Proactor|_get_loop|zmq|UserWarning|warnings.warn|LightGBM|remaining|elapsed|%|^\\\\s*$|training\")",
+      "Bash(./.venv/Scripts/python.exe -c \"import openpyxl; print\\('openpyxl', openpyxl.__version__\\)\")",
+      "Bash(./.venv/Scripts/python.exe -m pip install -q openpyxl)"
     ]
   }
 }
