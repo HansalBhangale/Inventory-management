@@ -90,3 +90,46 @@ def run_shadow(recs: pd.DataFrame, actual_orders: pd.DataFrame | None = None,
 
     return ShadowReport(n=len(out), reject_rate=float(out["rejected"].mean()),
                         flag_counts=flag_counts, divergence=divergence, rows=out)
+
+
+# --- CLI: review recommendations in shadow mode (Phase 9 / pilot week one) --------------------
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="Shadow-mode review: which recommendations would a shopkeeper veto?")
+    ap.add_argument("--recs", required=True,
+                    help=f"recommendations CSV with columns: {', '.join(REQUIRED)}[, perishable, "
+                         "shelf_life_demand]")
+    ap.add_argument("--actual-orders", help="optional CSV (sku_id, ordered_qty) — what the store "
+                                            "actually ordered, for divergence")
+    ap.add_argument("--flagged-out", help="optional path to write the flagged recommendations CSV")
+    args = ap.parse_args(argv)
+
+    recs = pd.read_csv(args.recs)
+    actual = pd.read_csv(args.actual_orders) if args.actual_orders else None
+    rep = run_shadow(recs, actual)
+
+    print("=" * 70)
+    print(f"Shadow review of {rep.n} recommendation(s). Week-one signal is the REJECT RATE, "
+          "not accuracy.")
+    print(f"  reject rate: {rep.reject_rate:.1%}  (fraction a shopkeeper would likely veto)")
+    if rep.flag_counts:
+        print("  reasons (chase the data/config behind each):")
+        for f, c in sorted(rep.flag_counts.items(), key=lambda kv: -kv[1]):
+            print(f"    {c:4d}  {f}")
+    else:
+        print("  no recommendations flagged — none look obviously wrong.")
+    if rep.divergence:
+        d = rep.divergence
+        print(f"  vs actual orders: mean |divergence| {d['mean_abs_divergence']:.2f} over "
+              f"{d['n_matched']} matched SKUs; over-order rate {d['over_order_rate']:.1%}")
+    print("=" * 70)
+    if args.flagged_out:
+        rep.rows[rep.rows["rejected"]].to_csv(args.flagged_out, index=False)
+        print(f"wrote flagged recommendations -> {args.flagged_out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

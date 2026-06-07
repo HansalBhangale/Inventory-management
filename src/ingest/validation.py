@@ -224,3 +224,63 @@ def gate(results: list[ValidationResult], *, raise_on_block: bool = True) -> dic
     if blocks and raise_on_block:
         raise DataContractError("BATCH QUARANTINED:\n  " + "\n  ".join(summary["blocks"]))
     return summary
+
+
+# --- CLI: validate a store's CSV exports before anything else (Phase 9 / pilot onboarding) ----
+
+_DATE_COLS = {"date", "receipt_date", "order_date", "start", "end"}
+
+
+def _read_csv(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    for c in df.columns:
+        if c in _DATE_COLS:
+            df[c] = pd.to_datetime(df[c], errors="coerce")
+    return df
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="Validate a store's CSV exports against the data contract before ingesting.")
+    ap.add_argument("--sales", help="sales export CSV (date, store_id, sku_id, qty[, unit_price])")
+    ap.add_argument("--product-master", help="product master CSV (sku_id, pack_size, perishable)")
+    ap.add_argument("--inventory", help="inventory snapshot CSV (date, store_id, sku_id, on_hand_qty)")
+    ap.add_argument("--suppliers", help="suppliers CSV (supplier_id[, moq, order_cycle])")
+    ap.add_argument("--purchase-orders", help="PO CSV (po_id, sku_id, supplier_id, order_date)")
+    ap.add_argument("--goods-receipts", help="GRN CSV (po_id, sku_id, receipt_date[, received_qty])")
+    args = ap.parse_args(argv)
+
+    pm = _read_csv(args.product_master) if args.product_master else None
+    po = _read_csv(args.purchase_orders) if args.purchase_orders else None
+    results: list[ValidationResult] = []
+    if args.sales:
+        results.append(validate_sales(_read_csv(args.sales), pm))
+    if args.inventory:
+        results.append(validate_inventory(_read_csv(args.inventory)))
+    if args.goods_receipts:
+        results.append(validate_receipts(_read_csv(args.goods_receipts), po))
+    if args.suppliers:
+        results.append(validate_suppliers(_read_csv(args.suppliers), po))
+    if not results:
+        ap.error("provide at least one input (e.g. --sales sales.csv --product-master pm.csv)")
+
+    summary = gate(results, raise_on_block=False)
+    print("=" * 70)
+    if summary["blocks"]:
+        print(f"QUARANTINED — {len(summary['blocks'])} blocking problem(s). Fix these, re-export, "
+              "re-run. Nothing is scored until they're gone:")
+        for b in summary["blocks"]:
+            print(f"  [BLOCK] {b}")
+    else:
+        print("No blocking problems — this batch can be ingested.")
+    if summary["warnings"]:
+        print(f"\n{len(summary['warnings'])} warning(s) — handled automatically, review when you can:")
+        for w in summary["warnings"]:
+            print(f"  [warn]  {w}")
+    print("=" * 70)
+    return 0 if summary["passed"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

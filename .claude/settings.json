@@ -10,7 +10,8 @@
       "Bash(git commit -q -m 'docs: mark Phase 6 complete \\(validated machinery\\) in project report *)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_guard.py -q)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_validation.py -q)",
-      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_shadow.py -q)"
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_shadow.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m pytest)"
     ]
   }
 }
