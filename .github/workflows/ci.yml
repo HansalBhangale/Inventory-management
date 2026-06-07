@@ -1,0 +1,43 @@
+# CI — aimed at the INVARIANTS, not "does the pipeline run".
+# Every property we fought to establish must be un-regressable: a change that breaks tail
+# coverage, lets a lag peek past the horizon, flips a frontier verdict, or lets the data contract
+# accept bad input must FAIL the build. This file is transferable as-is to a real store — it tests
+# the engine's properties, not M5's statistics.
+name: invariants
+
+on:
+  push: {branches: [main, master]}
+  pull_request: {branches: [main, master]}
+
+jobs:
+  invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install deps
+        run: uv pip install --system -r requirements.txt
+      - name: Lint
+        run: |
+          uv pip install --system ruff
+          ruff check src tests
+      - name: Invariant test suite
+        # These guard the hard-won properties (no data files needed — pure-logic + synthetic):
+        #   leak-safety (lag>=horizon, embargo) · metric correctness · frontier-gate verdicts ·
+        #   routing-decision rule · online-layer tail-calibration · magnitude-drift guard ·
+        #   adversarial data contract · shadow-mode reject logic
+        run: |
+          uv run pytest -q \
+            tests/test_config.py tests/test_metrics.py tests/test_panel_splits.py \
+            tests/test_features.py tests/test_frontier_gate.py tests/test_operating_policy.py \
+            tests/test_reorder.py tests/test_continuous.py tests/test_guard.py \
+            tests/test_validation.py tests/test_shadow.py
+
+  # Model CD (retrain -> evaluate -> register -> MANUAL promote) is a separate, manually-dispatched
+  # workflow, NOT wired to auto-fire: there is no real drift in a fixed dataset to trigger on, and
+  # an autonomous loop against synthetic data builds false "it's running in prod" confidence.
+  # Enable promotion automation only against a real drift signal. (Phase 6 components are unit-
+  # validated; the loop is callable via src/continuous/retrain.py with a human trigger.)

@@ -1,0 +1,45 @@
+# One-VM pilot stack (Phase 9 groundwork). Professional yet cheap — consistent with the
+# affordability constraint set in Phase 0. SCAFFOLDING: service commands are stubs until the
+# orchestrator DAG and API handlers land; this file defines the topology a pilot plugs into.
+#
+# Deliberately NOT here (premature pre-pilot / pre-scale): Kubernetes, KServe/Seldon, a standalone
+# feature store. Add at multi-store scale, not for one store.
+services:
+  postgres:                       # operational state (recommendations, run log)
+    image: postgres:16
+    environment: {POSTGRES_DB: kirana, POSTGRES_PASSWORD: kirana}
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+
+  minio:                          # S3-compatible local object store (artifacts, parquet)
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment: {MINIO_ROOT_USER: kirana, MINIO_ROOT_PASSWORD: kirana123}
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["miniodata:/data"]
+
+  mlflow:                         # experiment tracking + champion/challenger registry (Phase 6)
+    image: ghcr.io/mlflow/mlflow:latest
+    command: mlflow server --host 0.0.0.0 --backend-store-uri postgresql://postgres:kirana@postgres/kirana
+    depends_on: [postgres]
+    ports: ["5000:5000"]
+
+  api:                            # FastAPI reorder service + fetch-recommendations (batch-first)
+    build: {context: .., dockerfile: deploy/Dockerfile}
+    environment: {KIRANA_MODE: shadow, KIRANA_DB_URL: postgresql://postgres:kirana@postgres/kirana}
+    depends_on: [postgres]
+    ports: ["8000:8000"]
+    command: ["python", "-c", "print('API stub — wire FastAPI app in src/serve/api.py')"]
+
+  prometheus:                     # operational metrics (latency, freshness, run failures)
+    image: prom/prometheus
+    ports: ["9090:9090"]
+
+  grafana:                        # dashboards + ALERTS — incl. the magnitude-drift guard:
+    image: grafana/grafana        #   P95-coverage panel with a breach alert that pages on a surge
+    depends_on: [prometheus]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata: {}
+  miniodata: {}
