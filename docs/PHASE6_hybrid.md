@@ -19,9 +19,16 @@ The reorder engine depends on calibrated tails. The online layer applies a singl
 - **Magnitude drift** (demand 5→15, spread should widen): P90 0.77 · P95 0.839 · P99 0.925 — recovers most but **under-covers the upper tail**, because a location-only correction cannot widen the distribution.
 - **Consequence (the hybrid justifying itself):** the online layer is trusted for LEVEL drift only; tail recalibration under magnitude growth is the job of the drift-triggered base RETRAIN (slow path). The online layer must never be relied on to maintain the tail the reorder engine reads. (Tests: test_continuous.py.)
 
+## 3b. Magnitude-drift GUARD (closes the blind window)
+
+The calibration finding above is a live hazard, not just a boundary: during a magnitude surge the online layer makes every fast metric look healthy while P95 coverage silently collapses — the engine under-buffers the spike (festival/salary-day) that most needs protection, through the drift latency + retrain lag. Guard (verified, test_guard.py):
+- `RollingCoverageMonitor` (src/continuous/coverage_monitor.py): tail coverage as a FIRST-CLASS signal — flags the silent P95 collapse that point error misses.
+- `MagnitudeShiftMonitor`: fires on an upward level surge (early warning), quiet when stationary.
+- `ProtectiveBuffer` + `guarded_quantiles` (src/reorder/protective.py): while a breach is active, floor the served quantiles by a recent-volatility estimate (mean + z·recent_std). **Restores P95 coverage 0.84 → 0.94** during the stale-base window, until the drift-triggered retrain re-widens the learned tail.
+
 ## 4. Online corrector on REAL M5 residuals (the honest caveat, measured)
 
-- 6,300 held-out obs: base MAE 1.0556 vs corrected 1.0757. ~neutral, as expected — the base forecast's residuals on a shock-free extract are near-zero-mean noise with nothing for the fast layer to exploit. On live data with drift/promos, this is where it earns its keep.
+- 6,300 held-out obs: base MAE 1.1258 vs corrected 1.1613. ~neutral, as expected — the base forecast's residuals on a shock-free extract are near-zero-mean noise with nothing for the fast layer to exploit. On live data with drift/promos, this is where it earns its keep.
 
 ## Components
 

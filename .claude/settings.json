@@ -7,7 +7,8 @@
       "Bash(./.venv/Scripts/python.exe -m src.evaluate.operating_policy)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_continuous.py -q)",
       "Bash(./.venv/Scripts/python.exe -m src.continuous.validate_hybrid)",
-      "Bash(git commit -q -m 'docs: mark Phase 6 complete \\(validated machinery\\) in project report *)"
+      "Bash(git commit -q -m 'docs: mark Phase 6 complete \\(validated machinery\\) in project report *)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_guard.py -q)"
     ]
   }
 }
