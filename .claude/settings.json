@@ -11,7 +11,10 @@
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_guard.py -q)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_validation.py -q)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_shadow.py -q)",
-      "Bash(./.venv/Scripts/python.exe -m pytest)"
+      "Bash(./.venv/Scripts/python.exe -m pytest)",
+      "Bash(./.venv/Scripts/python.exe -m src.ingest.download_data --dataset favorita)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_newsvendor.py tests/test_promo.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider)"
     ]
   }
 }

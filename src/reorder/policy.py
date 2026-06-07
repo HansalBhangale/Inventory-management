@@ -55,3 +55,23 @@ def recommend(inventory_position: float, s: float, S: float,
             f"(P{int(service_q*100)} demand over {protection_days:.0f}d protection period); "
             f"ordering up to {S:.0f} -> qty {qty} (MOQ {moq}, pack {pack_size}).")
     return Recommendation(True, qty, s, S, inventory_position, expl)
+
+
+def dispatch_reorder(*, perishable: bool, inventory_position: float,
+                     quantiles: dict[float, float] | None = None,
+                     sell_price: float = 0.0, unit_cost: float = 0.0,
+                     shelf_life_demand: float = 0.0,
+                     s: float = 0.0, S: float = 0.0,
+                     moq: int = 1, pack_size: int = 1) -> tuple[str, int]:
+    """Route an item to the correct reorder branch and report WHICH branch fired.
+
+    Perishable -> newsvendor (critical fractile, capped to shelf-life demand); everything else
+    -> continuous-review (s, S). The returned branch name is the diagnostic that proves the
+    perishable path actually engages instead of silently defaulting to (s, S).
+    """
+    if perishable and quantiles:
+        from src.reorder.newsvendor import newsvendor_order, quantile_interpolator
+        o = newsvendor_order(quantile_interpolator(quantiles), sell_price, unit_cost,
+                             shelf_life_demand, inventory_position, moq, pack_size)
+        return "newsvendor", o.order_qty
+    return "sS", recommend(inventory_position, s, S, moq, pack_size).order_qty
