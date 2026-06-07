@@ -14,7 +14,10 @@
       "Bash(./.venv/Scripts/python.exe -m pytest)",
       "Bash(./.venv/Scripts/python.exe -m src.ingest.download_data --dataset favorita)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_newsvendor.py tests/test_promo.py -q)",
-      "Bash(./.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider)"
+      "Bash(./.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider)",
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.favorita_exercise --stores 1 2 3 44 --since 2016-06-01)",
+      "Bash(grep -vE \"Proactor|_get_loop|zmq|UserWarning|warnings.warn|LightGBM|remaining|elapsed|%|^\\\\s*$\")",
+      "Bash(grep -vE \"Proactor|_get_loop|zmq|UserWarning|warnings.warn|LightGBM|remaining|elapsed|%|^\\\\s*$|training\")"
     ]
   }
 }
