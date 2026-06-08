@@ -14,7 +14,6 @@ import argparse
 from datetime import timedelta
 
 import duckdb
-import numpy as np
 import pandas as pd
 
 from src.config import CONFIG

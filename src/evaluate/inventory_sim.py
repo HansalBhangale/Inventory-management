@@ -61,7 +61,6 @@ def _load_series(sample_per_class: int) -> tuple[pd.DataFrame, dict]:
     print(f"sim window: {dates[0].date()}..{dates[-1].date()} ({len(dates)} contiguous days)")
 
     keys = df[["store_id", "sku_id", "intermittency"]].drop_duplicates()
-    rng = np.random.default_rng(0)
     picked = (keys.groupby("intermittency", group_keys=False)
                   .apply(lambda g: g.sample(min(len(g), sample_per_class), random_state=0)))
     df = df.merge(picked[["store_id", "sku_id"]], on=["store_id", "sku_id"])

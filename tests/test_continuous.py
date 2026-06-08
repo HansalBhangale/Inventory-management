@@ -62,7 +62,7 @@ def _coverage_after_correction(kind, seed=7):
         l0, l1 = 5.0, 15.0
         base = {"pred_q50": poisson.ppf(.5, l0), "pred_q90": poisson.ppf(.9, l0),
                 "pred_q95": poisson.ppf(.95, l0), "pred_q99": poisson.ppf(.99, l0)}
-        central, draw, mus = l0, (lambda l: rng.poisson(l)), (l0, l1)
+        central, draw, mus = l0, (lambda lam: rng.poisson(lam)), (l0, l1)
 
     c = OnlineResidualCorrector(lr=0.05)
     T = 8000

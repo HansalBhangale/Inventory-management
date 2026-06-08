@@ -21,7 +21,12 @@
       "Bash(./.venv/Scripts/python.exe -c \"import openpyxl; print\\('openpyxl', openpyxl.__version__\\)\")",
       "Bash(./.venv/Scripts/python.exe -m pip install -q openpyxl)",
       "Bash(./.venv/Scripts/python.exe -m src.evaluate.pilot_online_retail --store \"United Kingdom\")",
-      "Bash(./.venv/Scripts/python.exe -m src.evaluate.pilot_online_retail --store \"United Kingdom\" --folds 4)"
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.pilot_online_retail --store \"United Kingdom\" --folds 4)",
+      "Bash(./.venv/Scripts/python.exe -m pip install -q ruff)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src tests)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src tests --statistics)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src tests --fix)",
+      "Bash(git push *)"
     ]
   }
 }

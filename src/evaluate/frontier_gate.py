@@ -99,7 +99,6 @@ def _evaluate(slice_df: pd.DataFrame, op_q: float, label: str) -> dict:
 def run(regime: str) -> tuple[pd.DataFrame, bool]:
     res = pd.read_parquet(SIM_RESULTS)
     res = res[res["regime"] == regime].copy()
-    q99_trained = bool(np.isclose(res["q"], 0.99).any())
 
     rows = [_evaluate(res, GATE_Q, "AGGREGATE")]
     for cls in VOLUME_CLASSES + TAIL_CLASSES:

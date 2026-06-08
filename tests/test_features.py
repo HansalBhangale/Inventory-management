@@ -1,6 +1,5 @@
 """Phase 4 tests: feature leak-safety. Skip if feature panel not built."""
 import duckdb
-import pandas as pd
 import pytest
 
 from src.config import CONFIG

@@ -99,7 +99,7 @@ def demo_calibration() -> dict:
             l0, l1 = 5.0, 15.0
             base = {"pred_q90": poisson.ppf(.9, l0), "pred_q95": poisson.ppf(.95, l0),
                     "pred_q99": poisson.ppf(.99, l0)}
-            central, draw, mus = l0, (lambda l: rng.poisson(l)), (l0, l1)
+            central, draw, mus = l0, (lambda lam: rng.poisson(lam)), (l0, l1)
         c = OnlineResidualCorrector(lr=0.05)
         T = 8000
         cc = {k: 0 for k in base}

@@ -1,5 +1,5 @@
 """Phase 3 tests: panel integrity + leak-free splits."""
-from datetime import date, timedelta
+from datetime import date
 
 import duckdb
 import pytest
