@@ -28,7 +28,8 @@
       "Bash(./.venv/Scripts/python.exe -m ruff check src tests --fix)",
       "Bash(git push *)",
       "Bash(gh --version)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_bridge.py -q)"
     ]
   }
 }
