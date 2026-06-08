@@ -35,7 +35,10 @@
       "Bash(./.venv/Scripts/python.exe -m ruff check src/pos app tests/test_pos_checkout.py tests/test_pos_sales.py)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_manage.py -q)",
       "Bash(./.venv/Scripts/python.exe -m ruff check src/pos app)",
-      "Bash(./.venv/Scripts/python.exe -m py_compile app/main.py app/theme.py app/checkout_app.py)"
+      "Bash(./.venv/Scripts/python.exe -m py_compile app/main.py app/theme.py app/checkout_app.py)",
+      "Bash(./.venv/Scripts/python.exe -m py_compile app/main.py)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check app/main.py)",
+      "Bash(git commit -q -m 'POS checkout: quantity entry for the selected product *)"
     ]
   }
 }

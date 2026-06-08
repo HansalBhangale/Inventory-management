@@ -61,8 +61,15 @@ class CheckoutPage(QWidget):
         self.results = QListWidget()
         self.search.returnPressed.connect(self.do_search)
         self.results.itemDoubleClicked.connect(self.add_selected)
-        add = QPushButton("Add to cart"); add.clicked.connect(self.add_selected)
-        left.addWidget(self.search); left.addWidget(self.results); left.addWidget(add)
+        # quantity entry for the selected product (negative = return)
+        qty_row = QHBoxLayout()
+        qty_row.addWidget(QLabel("Qty"))
+        self.qty = QSpinBox(); self.qty.setRange(-9999, 9999); self.qty.setValue(1)
+        self.qty.setFixedWidth(90); self.qty.lineEdit().returnPressed.connect(self.add_selected)
+        qty_row.addWidget(self.qty); qty_row.addStretch(1)
+        add = QPushButton("Add to cart"); add.setObjectName("primary")
+        add.clicked.connect(self.add_selected); qty_row.addWidget(add)
+        left.addWidget(self.search); left.addWidget(self.results); left.addLayout(qty_row)
         root.addWidget(left_card, 1)
 
         right_card, right = _card("Cart")
@@ -82,8 +89,14 @@ class CheckoutPage(QWidget):
 
     def add_selected(self):
         it = self.results.currentItem()
-        if it:
-            self.ctrl.add(it.text().split("  |  ")[0], 1); self.refresh()
+        if not it:
+            self.toast("select a product first", error=True); return
+        qty = self.qty.value()
+        if qty == 0:
+            self.toast("quantity can't be 0", error=True); return
+        self.ctrl.add(it.text().split("  |  ")[0], qty)
+        self.qty.setValue(1)          # reset for the next item
+        self.refresh()
 
     def remove_selected(self):
         r = self.tbl.currentRow()
