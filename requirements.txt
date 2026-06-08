@@ -42,6 +42,10 @@ ipykernel>=6.29
 # --- Testing ---
 pytest>=8.0
 
+# --- POS shop-machine (only needed to RUN the desktop app, not the engine/tests) ---
+# pyside6>=6.6           # checkout GUI (app/checkout_app.py)
+# reportlab>=4.0         # optional PDF receipt (text receipt works without it)
+
 # --- MLOps (heavier; uncomment when reaching Phases 6/9/10) ---
 # mlflow>=2.10           # experiment tracking + model registry
 # evidently>=0.4         # drift & monitoring

@@ -29,7 +29,10 @@
       "Bash(git push *)",
       "Bash(gh --version)",
       "Bash(gh run *)",
-      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_bridge.py -q)"
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_bridge.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_sales.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_sales.py tests/test_pos_bridge.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos app tests/test_pos_checkout.py tests/test_pos_sales.py)"
     ]
   }
 }
