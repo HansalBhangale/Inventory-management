@@ -70,13 +70,23 @@ def _not_future(s: pd.Series) -> pd.Series:
     return pd.to_datetime(s, errors="coerce") <= today
 
 
+def _whole_number(s: pd.Series) -> pd.Series:
+    """True where the value is a whole number, regardless of storage dtype (int32/int64/float).
+    BLOCKs genuinely fractional qty (e.g. Favorita weight items) while accepting any integer
+    representation — real loaders return int32, which exact-int64 typing wrongly rejected."""
+    v = pd.to_numeric(s, errors="coerce")
+    return v.notna() & (v == v.round())
+
+
 SALES_SCHEMA = pa.DataFrameSchema(
     {
         "date": pa.Column("datetime64[ns]", pa.Check(_not_future, error="date in the future"),
                           nullable=False, coerce=True),
         "store_id": pa.Column(str, nullable=False),
         "sku_id": pa.Column(str, nullable=False),
-        "qty": pa.Column(int, nullable=False, coerce=False),       # non-integer qty must FAIL
+        # whole-number, any int/float storage; genuinely fractional (weight items) -> FAIL
+        "qty": pa.Column(float, pa.Check(_whole_number, error="non-integer qty"),
+                         nullable=False, coerce=True),
         "unit_price": pa.Column(float, pa.Check.ge(0), nullable=True, coerce=True, required=False),
     },
     strict=False, name="sales_transactions",
@@ -96,7 +106,8 @@ INVENTORY_SCHEMA = pa.DataFrameSchema(
         "date": pa.Column("datetime64[ns]", nullable=False, coerce=True),
         "store_id": pa.Column(str, nullable=False),
         "sku_id": pa.Column(str, nullable=False),
-        "on_hand_qty": pa.Column(int, pa.Check.ge(0), nullable=False, coerce=False),  # negative => FAIL
+        "on_hand_qty": pa.Column(float, [pa.Check.ge(0), pa.Check(_whole_number, error="non-integer on_hand")],
+                                 nullable=False, coerce=True),  # negative or fractional => FAIL
     },
     strict=False, name="inventory_snapshot",
 )

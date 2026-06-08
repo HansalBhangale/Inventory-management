@@ -19,7 +19,9 @@
       "Bash(grep -vE \"Proactor|_get_loop|zmq|UserWarning|warnings.warn|LightGBM|remaining|elapsed|%|^\\\\s*$\")",
       "Bash(grep -vE \"Proactor|_get_loop|zmq|UserWarning|warnings.warn|LightGBM|remaining|elapsed|%|^\\\\s*$|training\")",
       "Bash(./.venv/Scripts/python.exe -c \"import openpyxl; print\\('openpyxl', openpyxl.__version__\\)\")",
-      "Bash(./.venv/Scripts/python.exe -m pip install -q openpyxl)"
+      "Bash(./.venv/Scripts/python.exe -m pip install -q openpyxl)",
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.pilot_online_retail --store \"United Kingdom\")",
+      "Bash(./.venv/Scripts/python.exe -m src.evaluate.pilot_online_retail --store \"United Kingdom\" --folds 4)"
     ]
   }
 }
