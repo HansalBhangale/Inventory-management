@@ -26,7 +26,9 @@
       "Bash(./.venv/Scripts/python.exe -m ruff check src tests)",
       "Bash(./.venv/Scripts/python.exe -m ruff check src tests --statistics)",
       "Bash(./.venv/Scripts/python.exe -m ruff check src tests --fix)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(gh --version)",
+      "Bash(gh run *)"
     ]
   }
 }
