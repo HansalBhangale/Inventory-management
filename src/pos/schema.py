@@ -126,11 +126,34 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+# Columns added to existing tables after their first release. CREATE TABLE IF NOT EXISTS won't add
+# columns to a DB created by an older version, so we ALTER them in (additive migrations only).
+_MIGRATIONS: dict[str, dict[str, str]] = {
+    "recommendations": {
+        "order_up_to": "REAL",
+        "inventory_position": "REAL",
+        "expected_demand_protection": "REAL",
+        "moq": "INTEGER DEFAULT 1",
+        "pack_size": "INTEGER DEFAULT 1",
+    },
+}
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, cols in _MIGRATIONS.items():
+        have = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for name, decl in cols.items():
+            if name not in have:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+    conn.commit()
+
+
 def create_db(db_path: str | Path) -> sqlite3.Connection:
-    """Create the operational schema (idempotent) and return an open connection."""
+    """Create the operational schema (idempotent), apply additive migrations, return the conn."""
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = connect(db_path)
     conn.executescript(DDL)
+    _migrate(conn)                # backfill columns onto DBs created by an older version
     conn.commit()
     return conn
 

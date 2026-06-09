@@ -32,6 +32,20 @@ def test_schema_creates_all_tables(tmp_path):
     conn.close()
 
 
+def test_migration_backfills_columns_on_old_db(tmp_path):
+    # simulate a DB created by an older version: recommendations missing the shadow-context columns
+    db = tmp_path / "old.db"
+    raw = sqlite3.connect(db)
+    raw.execute("CREATE TABLE recommendations (sku_id TEXT, run_date TEXT, order_qty INTEGER, "
+                "PRIMARY KEY (sku_id, run_date))")
+    raw.commit(); raw.close()
+    conn = create_db(db)              # should ALTER the missing columns in, not crash
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(recommendations)")}
+    conn.close()
+    assert {"order_up_to", "inventory_position", "expected_demand_protection",
+            "moq", "pack_size"}.issubset(cols)
+
+
 def test_foreign_key_blocks_orphan_line_item(tmp_path):
     conn = create_db(tmp_path / "s.db")
     conn.execute("INSERT INTO transactions VALUES ('T1','SHOP01','2024-01-01T10:00','cash',0)")
