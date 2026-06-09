@@ -115,30 +115,35 @@ def run_recommendations(db_path, store_id: str = "SHOP01", *, lookback: int = 28
         moq = int(sup["moq"]) if sup and sup.get("moq") else 1
         pack = int(p.get("pack_size") or 1)
 
+        mean_P = q["dbar"] * P                                  # expected demand over protection
         if p.get("perishable") and p.get("sell_price") and p.get("unit_cost") is not None:
             # newsvendor: stock to the critical fractile, capped to what sells before spoiling
             qfun = quantile_interpolator({0.5: q["q50"], 0.9: q["q90"], 0.95: q["q95"], 0.99: q["q99"]})
             shelf_demand = q["dbar"] * (p.get("shelf_life_days") or P)
             o = newsvendor_order(qfun, p["sell_price"], p["unit_cost"], shelf_demand, on_hand, moq, pack)
             order_qty, s_lvl, branch = o.order_qty, o.target_quantile_units, "newsvendor"
+            order_up_to = max(o.target_quantile_units, on_hand)
         else:
-            mean_P = q["dbar"] * P
             buffer = z * q["sigma"] * math.sqrt(P)
             s_lvl = mean_P + buffer                              # reorder point (Route B safety stock)
-            S = s_lvl + q["dbar"] * REVIEW_DAYS                  # order-up-to
-            order_qty = round_order(S - on_hand, moq, pack) if on_hand <= s_lvl else 0
+            order_up_to = s_lvl + q["dbar"] * REVIEW_DAYS        # order-up-to S
+            order_qty = round_order(order_up_to - on_hand, moq, pack) if on_hand <= s_lvl else 0
             branch = "(s,S)"
 
         should = int(order_qty > 0)
         ordered += should
         rows.append((sku, run_date, q["q50"], q["q90"], q["q95"], q["q99"], should, int(order_qty),
-                     round(float(s_lvl), 2), _reason(sku, branch, P, on_hand, s_lvl, int(order_qty), q["q95"]),
-                     "pending"))
+                     round(float(s_lvl), 2),
+                     _reason(sku, branch, P, on_hand, s_lvl, int(order_qty), q["q95"]), "pending",
+                     round(float(order_up_to), 2), float(on_hand), round(float(mean_P), 2),
+                     moq, pack))
 
     with conn:
         conn.execute("DELETE FROM recommendations WHERE run_date = ?", (run_date,))
         conn.executemany(
             "INSERT INTO recommendations (sku_id, run_date, p50, p90, p95, p99, should_order, "
-            "order_qty, reorder_point, reason, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)", rows)
+            "order_qty, reorder_point, reason, status, order_up_to, inventory_position, "
+            "expected_demand_protection, moq, pack_size) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
     conn.close()
     return {"n": len(rows), "ordered": ordered, "run_date": run_date, "contract": contract}

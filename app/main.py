@@ -15,9 +15,12 @@ import sys
 
 from src.pos.catalog import ProductService, SupplierService
 from src.pos.checkout import CheckoutController
+from src.pos.dashboard import DashboardService
+from src.pos.engine_run import run_recommendations
 from src.pos.inventory import InventoryService
 from src.pos.receiving import ReceiptService
 from src.pos.schema import create_db
+from src.serve.settings import SETTINGS
 
 try:
     from PySide6.QtCore import Qt, QTimer
@@ -364,9 +367,78 @@ class ReceivingPage(QWidget):
         self.po.clear()
 
 
+class DashboardPage(QWidget):
+    """Morning Dashboard — recommendations grouped by vendor, SHADOW mode (suggest, never order).
+    Captures accept/reject and shows the reject rate (the in-product pilot signal)."""
+    def __init__(self, conn, db_path, toast):
+        super().__init__()
+        self.svc = DashboardService(conn); self.db_path = db_path; self.toast = toast
+        card, lay = _card("Morning Dashboard")
+
+        banner = QLabel(f"  SHADOW MODE — suggestions only. Nothing is ordered.  (mode: {SETTINGS.mode.value})")
+        banner.setStyleSheet("background:#1e3a34; color:#5eead4; border-radius:8px; padding:8px;")
+        lay.addWidget(banner)
+
+        bar = QHBoxLayout()
+        run = QPushButton("Generate today's list"); run.setObjectName("primary")
+        run.clicked.connect(self.run_engine)
+        self.stat = QLabel("—"); self.stat.setObjectName("muted")
+        self.flags = QLabel(""); self.flags.setObjectName("muted")
+        bar.addWidget(run); bar.addStretch(1); bar.addWidget(self.flags); bar.addSpacing(16)
+        bar.addWidget(self.stat)
+        lay.addLayout(bar)
+
+        self.tbl = _table(["Vendor", "Item", "Qty", "Reorder pt", "Why", "Status", "Decision"])
+        lay.addWidget(self.tbl)
+        QVBoxLayout(self).addWidget(card)
+
+    def run_engine(self):
+        try:
+            s = run_recommendations(self.db_path)        # bridge -> contract gate -> engine
+        except Exception as e:
+            self.toast(f"Run blocked: {e}", error=True); return
+        self.toast(f"{s['ordered']} of {s['n']} items suggested for reorder")
+        self.refresh()
+
+    def _decision_cell(self, sku, run_date):
+        w = QWidget(); h = QHBoxLayout(w); h.setContentsMargins(0, 0, 0, 0); h.setSpacing(6)
+        a = QPushButton("Accept"); a.setObjectName("primary")
+        r = QPushButton("Reject"); r.setObjectName("danger")
+        a.clicked.connect(lambda: self.decide(sku, run_date, "accepted"))
+        r.clicked.connect(lambda: self.decide(sku, run_date, "rejected"))
+        h.addWidget(a); h.addWidget(r)
+        return w
+
+    def decide(self, sku, run_date, status):
+        self.svc.set_decision(sku, run_date, status)
+        self.toast(f"{sku}: {status}")
+        self.refresh()
+
+    def refresh(self):
+        rd = self.svc.latest_run_date()
+        groups = self.svc.grouped()
+        flat = [(g["supplier"], it) for g in groups for it in g["items"]]
+        self.tbl.setRowCount(len(flat))
+        for i, (vendor, it) in enumerate(flat):
+            cells = [vendor, f"{it['sku_id']} — {it.get('name') or ''}", str(it["order_qty"]),
+                     f"{it['reorder_point']:.0f}", it["reason"], it["status"]]
+            for j, v in enumerate(cells):
+                self.tbl.setItem(i, j, QTableWidgetItem(v))
+            self.tbl.setCellWidget(i, 6, self._decision_cell(it["sku_id"], rd))
+        self.tbl.resizeRowsToContents()
+        if rd:
+            s = self.svc.summary(rd)
+            self.stat.setText(f"run {rd} · to-order {len(flat)} · decided {s['decided']} · "
+                              f"reject rate {s['reject_rate']:.0%}")
+            fl = self.svc.sanity_flags(rd)["flag_counts"]
+            self.flags.setText("sanity flags: " + (", ".join(f"{k}×{v}" for k, v in fl.items()) or "none"))
+        else:
+            self.stat.setText("No run yet — click 'Generate today's list'.")
+
+
 # ----------------------------------------------------------------------------- main window
 class MainWindow(QMainWindow):
-    def __init__(self, conn):
+    def __init__(self, conn, db_path):
         super().__init__()
         self.setWindowTitle("Kirana POS")
         self.resize(1100, 700)
@@ -379,7 +451,8 @@ class MainWindow(QMainWindow):
         brand = QLabel("  Kirana POS"); brand.setObjectName("h1"); brand.setContentsMargins(16, 0, 0, 14)
         sl.addWidget(brand)
         self.stack = QStackedWidget()
-        self.pages = {"Checkout": CheckoutPage(conn, self.toast),
+        self.pages = {"Dashboard": DashboardPage(conn, db_path, self.toast),
+                      "Checkout": CheckoutPage(conn, self.toast),
                       "Products": ProductsPage(conn, self.toast),
                       "Inventory": InventoryPage(conn, self.toast),
                       "Vendors": VendorsPage(conn, self.toast),
@@ -430,7 +503,7 @@ def main(argv=None) -> int:
     conn = create_db(args.db)
     app = QApplication(sys.argv)
     app.setStyleSheet(STYLESHEET)
-    win = MainWindow(conn); win.show()
+    win = MainWindow(conn, args.db); win.show()
     return app.exec()
 
 

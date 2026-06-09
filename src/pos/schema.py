@@ -84,6 +84,12 @@ CREATE TABLE IF NOT EXISTS recommendations (
     reorder_point REAL,
     reason        TEXT,
     status        TEXT DEFAULT 'pending',       -- pending|accepted|rejected|modified
+    -- shadow-context (so the dashboard can reuse src/serve/shadow.py reject-flag logic directly)
+    order_up_to                 REAL,
+    inventory_position          REAL,
+    expected_demand_protection  REAL,
+    moq                         INTEGER DEFAULT 1,
+    pack_size                   INTEGER DEFAULT 1,
     PRIMARY KEY (sku_id, run_date)
 );
 
