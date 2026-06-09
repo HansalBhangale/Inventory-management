@@ -12,7 +12,6 @@ from src.pos.catalog import ProductService, SupplierService
 from src.pos.engine_run import _lead_time_days, run_recommendations
 from src.pos.inventory import InventoryService
 from src.pos.receiving import ReceiptService
-from src.pos.sales import Cart, SaleService
 from src.pos.schema import connect, create_db
 from src.pos.seed import seed_shop
 
@@ -66,7 +65,6 @@ def test_low_stock_high_demand_triggers_order(tmp_path):
     conn = create_db(tmp_path / "s.db")
     SupplierService(conn).upsert("S1", "Wholesale", moq=12, default_lead_time_days=3)  # FK: supplier first
     ProductService(conn).upsert("A", "Atta", pack_size=6, sell_price=50.0, primary_supplier_id="S1")
-    svc = SaleService(conn)
     # build steady demand history, leave stock low
     base = datetime.now() - timedelta(days=30)
     for d in range(30):

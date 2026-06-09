@@ -40,7 +40,9 @@
       "Bash(./.venv/Scripts/python.exe -m ruff check app/main.py)",
       "Bash(git commit -q -m 'POS checkout: quantity entry for the selected product *)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_engine.py -q)",
-      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/engine_run.py tests/test_pos_engine.py)"
+      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/engine_run.py tests/test_pos_engine.py)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos tests/test_pos_engine.py)",
+      "Bash(git commit -q -m 'test\\(pos M3\\): drop unused imports/var \\(lint clean for CI\\) *)"
     ]
   }
 }
