@@ -46,7 +46,15 @@
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_dashboard.py -q)",
       "Bash(./.venv/Scripts/python.exe -m ruff check app src/pos)",
       "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/schema.py tests/test_pos_bridge.py)",
-      "Bash(git commit -q -m 'fix\\(pos\\): additive schema migration so existing shop.db gets the new recommendations columns *)"
+      "Bash(git commit -q -m 'fix\\(pos\\): additive schema migration so existing shop.db gets the new recommendations columns *)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_procurement.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check app src/pos/procurement.py tests/test_pos_procurement.py)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check app src/pos/procurement.py)",
+      "Bash(grep -E \"-->|F401|F811|E4|PLC|import\")",
+      "Bash(./.venv/Scripts/python.exe -m ruff check tests/test_pos_procurement.py)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check tests/test_pos_procurement.py --fix)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check app src tests)",
+      "Bash(./.venv/Scripts/python.exe -m pytest -q tests/test_pos_procurement.py)"
     ]
   }
 }

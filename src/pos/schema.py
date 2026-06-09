@@ -136,6 +136,9 @@ _MIGRATIONS: dict[str, dict[str, str]] = {
         "moq": "INTEGER DEFAULT 1",
         "pack_size": "INTEGER DEFAULT 1",
     },
+    "po_drafts": {
+        "dispatched_at": "TEXT",
+    },
 }
 
 

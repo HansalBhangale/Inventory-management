@@ -18,6 +18,7 @@ from src.pos.checkout import CheckoutController
 from src.pos.dashboard import DashboardService
 from src.pos.engine_run import run_recommendations
 from src.pos.inventory import InventoryService
+from src.pos.procurement import ProcurementService
 from src.pos.receiving import ReceiptService
 from src.pos.schema import create_db
 from src.serve.settings import SETTINGS
@@ -436,6 +437,69 @@ class DashboardPage(QWidget):
             self.stat.setText("No run yet — click 'Generate today's list'.")
 
 
+class ProcurementPage(QWidget):
+    """M5 — turn ACCEPTED recommendations into per-vendor POs and dispatch (offline-queued)."""
+    def __init__(self, conn, toast):
+        super().__init__()
+        self.conn = conn; self.svc = ProcurementService(conn); self.toast = toast
+        card, lay = _card("Procurement — Purchase Orders")
+        bar = QHBoxLayout()
+        build = QPushButton("Build POs from accepted"); build.setObjectName("primary")
+        build.clicked.connect(self.build)
+        bar.addWidget(build); bar.addStretch(1)
+        note = QLabel("Dispatch writes to data/outbox/ (offline-safe). Real email/WhatsApp = LIVE mode.")
+        note.setObjectName("muted"); bar.addWidget(note)
+        lay.addLayout(bar)
+        self.tbl = _table(["PO", "Vendor", "Units", "Status", "Action"])
+        lay.addWidget(self.tbl)
+        QVBoxLayout(self).addWidget(card)
+
+    def _run_date(self):
+        r = self.conn.execute("SELECT max(run_date) FROM recommendations").fetchone()
+        return r[0] if r and r[0] else None
+
+    def build(self):
+        rd = self._run_date()
+        if not rd:
+            self.toast("no recommendations yet — Dashboard → Generate", error=True); return
+        ids = self.svc.build_drafts(rd)
+        self.toast(f"{len(ids)} vendor PO(s) drafted from accepted items" if ids
+                   else "no accepted items to order"); self.refresh()
+
+    def _action(self, po):
+        w = QWidget(); h = QHBoxLayout(w); h.setContentsMargins(0, 0, 0, 0); h.setSpacing(6)
+        if po["status"] == "draft":
+            a = QPushButton("Approve"); a.setObjectName("primary")
+            a.clicked.connect(lambda: self._do(self.svc.approve, po["po_id"], "approved"))
+            h.addWidget(a)
+        if po["status"] in ("draft", "approved"):
+            d = QPushButton("Dispatch")
+            d.clicked.connect(lambda: self.dispatch(po["po_id"]))
+            h.addWidget(d)
+        if po["status"] == "dispatched":
+            h.addWidget(QLabel("✓ sent"))
+        return w
+
+    def _do(self, fn, po_id, label):
+        fn(po_id); self.toast(f"{po_id}: {label}"); self.refresh()
+
+    def dispatch(self, po_id):
+        ok = self.svc.dispatch(po_id)
+        self.toast(f"{po_id} dispatched → outbox" if ok else f"{po_id} queued (offline/sent)",
+                   error=not ok)
+        self.refresh()
+
+    def refresh(self):
+        import json
+        rows = self.svc.list_drafts()
+        self.tbl.setRowCount(len(rows))
+        for i, po in enumerate(rows):
+            units = sum(it["qty"] for it in json.loads(po["payload"] or "[]"))
+            for j, v in enumerate([po["po_id"], po["supplier_id"], str(units), po["status"]]):
+                self.tbl.setItem(i, j, QTableWidgetItem(v))
+            self.tbl.setCellWidget(i, 4, self._action(po))
+
+
 # ----------------------------------------------------------------------------- main window
 class MainWindow(QMainWindow):
     def __init__(self, conn, db_path):
@@ -456,7 +520,8 @@ class MainWindow(QMainWindow):
                       "Products": ProductsPage(conn, self.toast),
                       "Inventory": InventoryPage(conn, self.toast),
                       "Vendors": VendorsPage(conn, self.toast),
-                      "Receiving": ReceivingPage(conn, self.toast)}
+                      "Receiving": ReceivingPage(conn, self.toast),
+                      "Procurement": ProcurementPage(conn, self.toast)}
         self.nav_btns = []
         for name, page in self.pages.items():
             self.stack.addWidget(page)
