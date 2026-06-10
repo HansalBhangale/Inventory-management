@@ -80,7 +80,7 @@ def _gemini_polish(facts: str) -> str | None:
         return None
     try:
         genai.configure(api_key=key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-3.1-pro-preview")
         prompt = ("Rephrase this stock reorder explanation for a small shop owner in one or two "
                   "plain sentences. Do not change any numbers or the decision; only the facts "
                   f"given may be used:\n\n{facts}")
