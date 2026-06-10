@@ -13,6 +13,22 @@ from __future__ import annotations
 import os
 import sqlite3
 
+_ENV_LOADED = False
+
+
+def _load_env() -> None:
+    """Load a local .env (once) so GOOGLE_API_KEY can live in a .env file instead of a shell var.
+    No-op if python-dotenv isn't installed — the key can still come from the real environment."""
+    global _ENV_LOADED
+    if _ENV_LOADED:
+        return
+    _ENV_LOADED = True
+    try:
+        from dotenv import find_dotenv, load_dotenv
+        load_dotenv(find_dotenv(usecwd=True))
+    except ImportError:
+        pass
+
 
 def _context(conn: sqlite3.Connection, sku_id: str, run_date: str) -> dict | None:
     row = conn.execute(
@@ -47,6 +63,7 @@ def rule_based_explanation(ctx: dict) -> str:
 
 def _gemini_polish(facts: str) -> str | None:
     """Optional: ask Gemini to rephrase the FACTS more naturally. Returns None if unavailable."""
+    _load_env()
     key = os.getenv("GOOGLE_API_KEY")
     if not key:
         return None

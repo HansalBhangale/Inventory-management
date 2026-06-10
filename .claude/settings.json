@@ -61,7 +61,10 @@
       "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/nightly.py tests/test_pos_nightly.py --fix)",
       "Bash(./.venv/Scripts/python.exe -m ruff check src tests app)",
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_copilot.py -q)",
-      "Bash(./.venv/Scripts/python.exe -m ruff check app src/pos/copilot.py tests/test_pos_copilot.py)"
+      "Bash(./.venv/Scripts/python.exe -m ruff check app src/pos/copilot.py tests/test_pos_copilot.py)",
+      "Bash(./.venv/Scripts/python.exe -c \"import dotenv; print\\('dotenv', dotenv.__version__\\)\")",
+      "Bash(./.venv/Scripts/python.exe -m pip install -q python-dotenv)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/copilot.py)"
     ]
   }
 }
