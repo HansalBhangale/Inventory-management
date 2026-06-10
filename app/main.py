@@ -15,6 +15,7 @@ import sys
 
 from src.pos.catalog import ProductService, SupplierService
 from src.pos.checkout import CheckoutController
+from src.pos.copilot import explain as copilot_explain
 from src.pos.dashboard import DashboardService
 from src.pos.engine_run import run_recommendations
 from src.pos.inventory import InventoryService
@@ -405,15 +406,22 @@ class DashboardPage(QWidget):
         w = QWidget(); h = QHBoxLayout(w); h.setContentsMargins(0, 0, 0, 0); h.setSpacing(6)
         a = QPushButton("Accept"); a.setObjectName("primary")
         r = QPushButton("Reject"); r.setObjectName("danger")
+        why = QPushButton("Why?")
         a.clicked.connect(lambda: self.decide(sku, run_date, "accepted"))
         r.clicked.connect(lambda: self.decide(sku, run_date, "rejected"))
-        h.addWidget(a); h.addWidget(r)
+        why.clicked.connect(lambda: self.explain(sku, run_date))
+        h.addWidget(a); h.addWidget(r); h.addWidget(why)
         return w
 
     def decide(self, sku, run_date, status):
         self.svc.set_decision(sku, run_date, status)
         self.toast(f"{sku}: {status}")
         self.refresh()
+
+    def explain(self, sku, run_date):
+        # copilot EXPLAINS, never decides (rule-based; polished by Gemini only if GOOGLE_API_KEY set)
+        QMessageBox.information(self, "Why this recommendation?",
+                               copilot_explain(self.svc.conn, sku, run_date))
 
     def refresh(self):
         rd = self.svc.latest_run_date()

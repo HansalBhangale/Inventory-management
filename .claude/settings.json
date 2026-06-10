@@ -59,7 +59,9 @@
       "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_nightly.py tests/test_pos_engine.py tests/test_pos_dashboard.py -q)",
       "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/nightly.py tests/test_pos_nightly.py)",
       "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/nightly.py tests/test_pos_nightly.py --fix)",
-      "Bash(./.venv/Scripts/python.exe -m ruff check src tests app)"
+      "Bash(./.venv/Scripts/python.exe -m ruff check src tests app)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_copilot.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check app src/pos/copilot.py tests/test_pos_copilot.py)"
     ]
   }
 }
