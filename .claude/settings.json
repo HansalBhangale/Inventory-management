@@ -54,7 +54,12 @@
       "Bash(./.venv/Scripts/python.exe -m ruff check tests/test_pos_procurement.py)",
       "Bash(./.venv/Scripts/python.exe -m ruff check tests/test_pos_procurement.py --fix)",
       "Bash(./.venv/Scripts/python.exe -m ruff check app src tests)",
-      "Bash(./.venv/Scripts/python.exe -m pytest -q tests/test_pos_procurement.py)"
+      "Bash(./.venv/Scripts/python.exe -m pytest -q tests/test_pos_procurement.py)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_nightly.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_pos_nightly.py tests/test_pos_engine.py tests/test_pos_dashboard.py -q)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/nightly.py tests/test_pos_nightly.py)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/nightly.py tests/test_pos_nightly.py --fix)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src tests app)"
     ]
   }
 }

@@ -139,11 +139,20 @@ def run_recommendations(db_path, store_id: str = "SHOP01", *, lookback: int = 28
                      moq, pack))
 
     with conn:
-        conn.execute("DELETE FROM recommendations WHERE run_date = ?", (run_date,))
+        # Upsert: refresh PENDING recs, but PRESERVE rows the shopkeeper already decided
+        # (accepted/rejected/modified) — re-scoring a day must never erase human decisions.
         conn.executemany(
             "INSERT INTO recommendations (sku_id, run_date, p50, p90, p95, p99, should_order, "
             "order_qty, reorder_point, reason, status, order_up_to, inventory_position, "
             "expected_demand_protection, moq, pack_size) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(sku_id, run_date) DO UPDATE SET "
+            "  p50=excluded.p50, p90=excluded.p90, p95=excluded.p95, p99=excluded.p99, "
+            "  should_order=excluded.should_order, order_qty=excluded.order_qty, "
+            "  reorder_point=excluded.reorder_point, reason=excluded.reason, "
+            "  order_up_to=excluded.order_up_to, inventory_position=excluded.inventory_position, "
+            "  expected_demand_protection=excluded.expected_demand_protection, "
+            "  moq=excluded.moq, pack_size=excluded.pack_size "
+            "WHERE recommendations.status = 'pending'", rows)
     conn.close()
     return {"n": len(rows), "ordered": ordered, "run_date": run_date, "contract": contract}
