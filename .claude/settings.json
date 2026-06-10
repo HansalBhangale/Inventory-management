@@ -64,7 +64,10 @@
       "Bash(./.venv/Scripts/python.exe -m ruff check app src/pos/copilot.py tests/test_pos_copilot.py)",
       "Bash(./.venv/Scripts/python.exe -c \"import dotenv; print\\('dotenv', dotenv.__version__\\)\")",
       "Bash(./.venv/Scripts/python.exe -m pip install -q python-dotenv)",
-      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/copilot.py)"
+      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/copilot.py)",
+      "Bash(grep -vE \"remaining|%|UserWarning|warnings.warn|^\\\\s*$\")",
+      "Bash(./.venv/Scripts/python.exe -m ruff check src/pos/copilot.py app/main.py)",
+      "Bash(git commit -q -m 'POS copilot: log + tag the WHY source \\(rule-based vs Google Gemini\\) *)"
     ]
   }
 }

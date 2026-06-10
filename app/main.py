@@ -566,6 +566,8 @@ class MainWindow(QMainWindow):
 
 
 def main(argv=None) -> int:
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s: %(message)s")
     ap = argparse.ArgumentParser(description="Kirana POS desktop app.")
     ap.add_argument("--db", default="shop.db")
     args = ap.parse_args(argv)

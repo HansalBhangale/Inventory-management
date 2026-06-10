@@ -10,8 +10,11 @@ Two layers, both safe:
 """
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
+
+log = logging.getLogger("kirana.copilot")
 
 _ENV_LOADED = False
 
@@ -62,31 +65,45 @@ def rule_based_explanation(ctx: dict) -> str:
 
 
 def _gemini_polish(facts: str) -> str | None:
-    """Optional: ask Gemini to rephrase the FACTS more naturally. Returns None if unavailable."""
+    """Optional: ask Gemini to rephrase the FACTS more naturally. Returns None if unavailable.
+    Logs exactly which path is taken so you can see in the console whether Gemini was used."""
     _load_env()
     key = os.getenv("GOOGLE_API_KEY")
     if not key:
+        log.info("WHY source = RULE-BASED (no GOOGLE_API_KEY found; set it in .env to use Gemini)")
         return None
     try:
         import google.generativeai as genai
+    except ImportError:
+        log.info("WHY source = RULE-BASED (GOOGLE_API_KEY set, but google-generativeai not "
+                 "installed; run: pip install google-generativeai)")
+        return None
+    try:
         genai.configure(api_key=key)
         model = genai.GenerativeModel("gemini-1.5-flash")
         prompt = ("Rephrase this stock reorder explanation for a small shop owner in one or two "
                   "plain sentences. Do not change any numbers or the decision; only the facts "
                   f"given may be used:\n\n{facts}")
-        return model.generate_content(prompt).text.strip()
-    except Exception:
+        text = model.generate_content(prompt).text.strip()
+        log.info("WHY source = GOOGLE GEMINI (gemini-1.5-flash)")
+        return text
+    except Exception as e:
+        log.warning("WHY source = RULE-BASED (Gemini call failed: %s)", e)
         return None                       # any failure -> fall back to the rule-based text
 
 
-def explain(conn: sqlite3.Connection, sku_id: str, run_date: str, *, use_gemini: bool = True) -> str:
-    """Plain-English explanation for one recommendation. Always returns something useful."""
+def explain(conn: sqlite3.Connection, sku_id: str, run_date: str, *, use_gemini: bool = True,
+            tag_source: bool = True) -> str:
+    """Plain-English explanation for one recommendation. Always returns something useful.
+    Logs and (by default) tags which source produced the answer: Gemini vs the rule-based engine."""
     ctx = _context(conn, sku_id, run_date)
     if ctx is None:
         return f"No recommendation found for {sku_id} on {run_date}."
     facts = rule_based_explanation(ctx)
+    text, source = facts, "rule-based engine"
     if use_gemini:
         polished = _gemini_polish(facts)
         if polished:
-            return polished
-    return facts
+            text, source = polished, "Google Gemini"
+    log.info("WHY [%s] answered by: %s", sku_id, source)
+    return f"{text}\n\n— source: {source}" if tag_source else text
